@@ -95,8 +95,8 @@ export async function loadNoteTypes() {
 }
 
 /**
- * Turn one GeoJSON feature from the Notes API into our simple note object
- * (see CONTEXT.md section 7).
+ * Turn one GeoJSON feature from the Notes API into our simple note object:
+ * { id, lat, lon, status, createdAt, ageDays, text, comments, type, url }
  */
 export function normalizeNote(feature, types) {
   const props = feature.properties;

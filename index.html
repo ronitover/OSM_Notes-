@@ -101,7 +101,7 @@
       <!-- Scrollable panel content -->
       <section id="sidebar-content" class="flex-1 min-h-0 overflow-y-auto p-4">
 
-        <!-- ===== Notes panel: search form (+ results in later steps) ===== -->
+        <!-- ===== Notes panel: search form + results ===== -->
         <section id="notes-panel" aria-labelledby="notes-title">
           <h1 id="notes-title" class="text-lg font-semibold">Find old map notes</h1>
           <p class="text-sm text-gray-600 mb-4">
@@ -208,7 +208,7 @@
     <!-- ----- Map area ----- -->
     <!-- "isolate" keeps Leaflet's own z-indexes inside the map, so the bottom sheet stays on top -->
     <main class="relative flex-1 isolate">
-      <!-- Leaflet draws the map inside this div (Step 2) -->
+      <!-- Leaflet draws the map inside this div (js/map.js) -->
       <div id="map" class="absolute inset-0 bg-gray-200" aria-label="Map"></div>
 
       <!-- "Search this area" appears after the user pans or zooms the map -->

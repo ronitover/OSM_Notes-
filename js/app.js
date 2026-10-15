@@ -200,7 +200,7 @@ form.addEventListener('change', (event) => {
   if (!state.bbox || state.loading) return; // no search yet, or one is running
 
   const values = getFormValues(form);
-  const errors = validateSearch({ ...values, area: 'ok' }, true); // only check max results here
+  const errors = validateSearch({ ...values, area: '' }, true); // area was already checked: only check max results
   showFormErrors(errors);
   if (Object.keys(errors).length > 0) return;
 

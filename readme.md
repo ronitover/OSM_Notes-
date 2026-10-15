@@ -1,19 +1,92 @@
 # OSM Notes+
 
-A student redesign concept of [openstreetmap.org](https://www.openstreetmap.org). It keeps the familiar OSM layout (navbar, left sidebar, full-screen map, right-side map controls) and adds a **Notes panel** for finding, filtering and sorting OpenStreetMap map notes (reported map errors), oldest first.
+A student redesign concept of [openstreetmap.org](https://www.openstreetmap.org). It keeps the familiar OSM layout (navbar, left sidebar, full-screen map, right-side map controls) and adds one focused improvement: a **Notes panel** that lets a contributor find, filter and sort OpenStreetMap map notes (reported map errors) in an area, **oldest first**.
 
 > Student project — not affiliated with OpenStreetMap. Map data © OpenStreetMap contributors.
 
 ## Problem
-openstreetmap.org shows notes only as individual map pins. You can't filter them by status or age, or sort them by priority. Old reports stay unresolved, and newcomers don't know where to start.
+New and occasional OpenStreetMap contributors want to fix reported map errors in their area. openstreetmap.org shows notes only as individual map pins:
+- You can't filter them by status or age.
+- You can't sort them by priority.
+- You can't see what kind of problem each note is.
 
-**Goal:** help a contributor find the oldest unresolved notes in an area and act on them in under a minute.
+As a result, years-old reports stay unresolved and newcomers don't know where to start.
 
-## Tech stack
-- HTML5 (semantic elements)
-- Tailwind CSS (Play CDN) + a small `css/styles.css`
-- Vanilla JavaScript (ES modules)
-- Leaflet 1.9.4 for the map
+Evidence: GitHub issues openstreetmap-website [#3584](https://github.com/openstreetmap/openstreetmap-website/issues/3584) (no open-only / age filter for notes) and [#5294](https://github.com/openstreetmap/openstreetmap-website/issues/5294) (notes lack structured data), plus r/openstreetmap threads about old unresolved notes.
+
+**Goal:** help a contributor find the oldest unresolved notes in an area and act on them in under a minute, inside the familiar OSM interface.
+
+**Target users:** new and occasional OSM contributors, such as students at mapathons, local volunteers and community mapping groups.
+
+## Features
+**OSM-style shell**
+- Navbar with a generic map icon (not the official OSM logo), dummy links and a highlighted **Notes** link.
+- 360 px sidebar, full-screen Leaflet map, and a right-side control stack.
+- Footer with "© OpenStreetMap contributors" and the student-project disclaimer.
+
+**Map**
+- Centred on Bengaluru with OpenStreetMap tiles.
+- Working controls:
+  - **Zoom + / −**
+  - **My location** (Geolocation API, with a friendly message if denied)
+  - **Layers** (switches between Standard and Humanitarian tiles)
+- Legend, Share, Add note and Query show a "Not part of this prototype" tooltip.
+
+**Notes filter form**
+- Fields: Area or city, **Use my location**, Status chips (Open / Closed / All), Older than (Any, 6 months, 1 year, 3 years) and Max results (1–100).
+- Validation:
+  - Area is required (2–100 characters) unless your location is shared.
+  - Max results must be a whole number from 1 to 100.
+  - Errors appear inline under each field and clear as soon as you type.
+
+**Searching**
+1. The area name is geocoded with Nominatim.
+2. The box is clamped to at most 0.5° × 0.5° (the Notes API limit).
+3. Notes are fetched from the OSM Notes API.
+4. Each note is normalized into a simple object.
+5. Each note is labelled with a type (Missing road, Wrong name, Closed shop, …) by keyword matching against `data/noteTypes.json`.
+
+**Results list**
+- Sorted oldest first, with a result count.
+- Each card shows:
+  - an age badge (gray under 1 year, amber 1–3 years, red 3+ years)
+  - the note type
+  - a 2-line preview
+  - the created date
+  - an Open/Closed pill
+
+**Map markers**
+- One marker per result (red = open, green = closed).
+- Clicking a card highlights it and flies to its marker.
+- Clicking a marker highlights its card and scrolls to it.
+
+**Note detail view**
+- Back button, id, age badge, type, created date and reporter.
+- The full report and the comment thread.
+- **Open on OpenStreetMap** and **Copy link** (shows "Copied!").
+
+**States**
+- **Loading:** skeleton cards, plus a disabled form and a spinner on the submit button.
+- **Empty:** e.g. "No open notes older than 1 year here", with **Widen search**, which doubles the area up to the limit.
+- **Errors** (each with **Retry**): Area not found, Location blocked, No connection, Area too large (HTTP 400), and Server problem (other HTTP errors).
+
+**Live re-filtering**
+- Changing Status or "Older than" re-filters the stored notes **without a new request**.
+- It only refetches when closed notes are needed but only open ones were fetched.
+
+**Search this area**
+- After you pan or zoom to a different area, a button appears on the map that searches the visible area.
+
+**Responsive**
+- Below 768 px, the sidebar becomes a foldable **bottom sheet** (max 60% height) over a full-screen map, and the map controls reduce to zoom, locate and layers.
+- Below 1024 px, the navbar links collapse into a **menu button**.
+
+**Accessibility**
+- Labels for every input, and a `fieldset`/`legend` for the status chips.
+- `aria-label` on icon buttons, and `aria-expanded` on the menu and sheet toggles.
+- `aria-live="polite"` on results, `role="alert"` on errors, and green focus rings.
+- Note cards can be selected with **Enter** or **Space**.
+- Note text is **HTML-escaped**, because it is written by the public.
 
 ## How to run
 ES modules and `fetch()` don't work from `file://`, so serve the folder with a local server:
@@ -22,91 +95,27 @@ ES modules and `fetch()` don't work from `file://`, so serve the folder with a l
 npx serve .
 ```
 
-Then open the URL it prints (usually http://localhost:3000). You can also use the VS Code **Live Server** extension.
+Then open the URL it prints (usually http://localhost:3000). You can also use the VS Code **Live Server** extension. An internet connection is needed for the map tiles and APIs.
+
+## Tech stack
+- **HTML5:** semantic `header`, `nav`, `aside`, `main`, `section`, `article`, `form`, `fieldset`, `label`, `footer`.
+- **Tailwind CSS (Play CDN)**, plus a small `css/styles.css` for reusable bits (chips, badges, focus rings).
+- **Vanilla JavaScript (ES modules)**, no frameworks and no build step.
+- **Leaflet 1.9.4** for the map.
 
 ## Project structure
 ```
 index.html          page layout (navbar, sidebar, map, controls, footer)
 css/styles.css      small custom styles
-js/app.js           entry point: wires events, holds state
+js/app.js           entry point: app state + all event listeners
 js/api.js           fetch calls (Nominatim, Notes API, local JSON) + normalization
 js/map.js           Leaflet map, tile layers, map controls, note markers
-js/ui.js            sidebar rendering: notes panel, form errors, cards, detail view
+js/ui.js            sidebar rendering: form errors, cards, detail view, states
 js/utils.js         helpers: geolocation, validation, dates, bbox, type detection, filtering
 data/noteTypes.json note types and their keywords (used to label notes)
-CONTEXT.md          project brief / scope
 ```
 
-## Features so far
-- OSM-style layout: navbar, 360 px sidebar, full-screen map, right-side control stack, attribution footer.
-- Leaflet map centred on Bengaluru with OpenStreetMap tiles (attribution always visible).
-- Custom map controls:
-  - **Zoom + / −**
-  - **My location**: uses the browser Geolocation API, flies to you and shows a blue dot. If permission is denied, you get a friendly message.
-  - **Layers**: switches between Standard and Humanitarian (HOT) tiles.
-  - Legend, Share, Add note and Query are for looks only and show a "Not part of this prototype" tooltip.
-- **Notes filter form** in the sidebar ("Find old map notes"). It is shown on page load and when you click **Notes**:
-  - Area or city (text), plus a **Use my location** button.
-  - Status chips: Open / Closed / All.
-  - Older than: Any age, 6 months, 1 year, 3 years.
-  - Max results: 1–100 (default 20).
-- **Validation and feedback**:
-  - Area is required (2–100 characters) unless you shared your location. If you type an area, it is used instead of your location.
-  - Max results must be a whole number from 1 to 100.
-  - Errors appear inline under each field, the field gets a red border, and focus moves to the first bad field.
-  - Errors clear as soon as you start typing (`input` event).
-  - If location is denied, the message appears under the area field.
-- **Fetching notes** (on a valid submit):
-  1. A typed area is turned into a bounding box with **Nominatim**. A shared location uses a ~0.1° box around you instead.
-  2. The box is clamped to at most 0.5° × 0.5°, because the Notes API rejects big areas with HTTP 400.
-  3. Notes come from the **OSM Notes API** (`closed=0` for Open, `closed=-1` for Closed/All).
-  4. Each note is normalized into a simple object: id, lat/lon, status, created date, age in days, report text, comments and URL.
-  5. A **type** (Missing road, Wrong name, Closed shop, …) is guessed by keyword matching against `data/noteTypes.json`.
-  6. Errors are typed (`not-found`, `too-large`, `network`, `http`), so each one can get its own message.
-- **Results list**:
-  - Notes are filtered by Status and "Older than", sorted **oldest first**, and cut to Max results.
-  - A result count is shown, e.g. "Showing 20 of 103 notes, oldest first."
-  - Each card shows an age badge (gray under 1 year, amber 1–3 years, red 3+ years), the note type, a 2-line preview of the report, the created date and an Open/Closed pill.
-  - Note text is HTML-escaped before it is shown, because it is written by the public.
-- **Map markers**: one per result, red for open and green for closed. The map moves to the searched area.
-  - Clicking a card highlights the card, highlights its marker and flies the map to it.
-  - Clicking a marker highlights its marker and scrolls to its card.
-- **Loading state**: while searching, the whole form is disabled, the submit button shows a spinner and "Searching…", and three pulsing skeleton cards appear.
-- **Empty state**: for example "No open notes older than 1 year here", with a **Widen search** button that doubles the search box (up to the 0.5° limit). At the limit, the button is replaced by a hint to change the filters.
-- **Error states** with a **Retry** button that repeats the exact failed action:
-  - Area not found
-  - Location blocked / unavailable
-  - No connection (network error)
-  - Area too large (HTTP 400)
-  - Server problem (other HTTP errors)
-- **Live re-filtering**: changing Status or "Older than" after a search re-filters the stored notes with **no new request**. The one exception is switching from Open to Closed/All when only open notes were fetched: then it refetches with `closed=-1`.
-- **Search this area**: after you pan or zoom to a different area (`moveend`), a button appears at the top of the map that searches the visible area. It does not appear after the app's own map moves (fitting results, flying to a card).
-- **Responsive layout**:
-  - **Desktop (md, 768 px and up):** a 360 px sidebar next to the map.
-  - **Mobile (below 768 px):** the sidebar becomes a **bottom sheet** over a full-screen map. It is at most 60% of the screen height, has a rounded top and scrolls. Tapping the handle folds it down to show more map, and it opens again on a new search or a marker tap.
-  - Map controls on mobile are reduced to zoom, locate and layers.
-  - Below 1024 px, the navbar links collapse into a **menu button** that toggles a dropdown (Escape closes it). The full link set is too wide to fit between 768 and 1024 px, so the menu stays until 1024 px.
-- **Accessibility**:
-  - Every input has a `<label>`, and the status chips sit in a `<fieldset>` with a `<legend>`.
-  - Icon-only buttons have `aria-label`s.
-  - The menu button and sheet handle use `aria-expanded`.
-  - The results area is `aria-live="polite"` (and `aria-busy` while loading); map messages use `role="status"`; error panels use `role="alert"`.
-  - Links, buttons, chips and cards get a green focus ring.
-  - Cards can be reached with Tab and selected with **Enter** or **Space**.
-  - Opening a note moves focus to "Back", and Back returns focus to the card.
-- **Note detail view** (the **View** button on a card): Back button, note id, age badge, type, status, created date and reporter, the full report, the comment thread, an **Open on OpenStreetMap** link, and **Copy link** (shows "Copied!").
-
-## JavaScript events used (so far)
-| Event | Where |
-| --- | --- |
-| `submit` | Notes form: validate and search |
-| `input` | Area and Max results: clear the inline error while typing |
-| `change` | Status chips and Older than: re-filter results without refetching |
-| `moveend` (Leaflet) | Map: show the "Search this area" button |
-| `keydown` | Enter/Space on note cards, Escape closes the mobile menu |
-| `click` | Map controls, Notes link, Use my location, Clear location, note cards (event delegation), View, map markers, Back, Copy link, Retry, Widen search, Search this area, menu button, sheet handle |
-
-## APIs used
+## APIs used (all free, no API key)
 | Purpose | Endpoint |
 | --- | --- |
 | Standard map tiles | `https://tile.openstreetmap.org/{z}/{x}/{y}.png` |
@@ -115,13 +124,74 @@ CONTEXT.md          project brief / scope
 | Notes in a bounding box | `https://api.openstreetmap.org/api/0.6/notes.json?bbox=<minLon>,<minLat>,<maxLon>,<maxLat>&limit=1000&closed=<n>` |
 | Note types (local JSON) | `data/noteTypes.json` |
 
-All APIs are free and need no key. Nominatim is called only when the form is submitted (never on each keystroke), to respect its 1 request/second limit.
+`closed=0` returns only open notes and `closed=-1` returns open plus all closed notes. Nominatim is only called when the form is submitted (never on each keystroke), to respect its 1 request/second limit.
 
-## Progress
-- [x] Step 1: Project scaffold and OSM-style layout shell
-- [x] Step 2: Leaflet map with OSM tiles and map controls
-- [x] Step 3: Notes filter form with validation and feedback
-- [x] Step 4: Fetch and normalize notes from the OSM Notes API
-- [x] Step 5: Sorted note list, map markers and detail view
-- [x] Step 6: Loading, empty and error states with live re-filtering
-- [x] Step 7: Responsive layout (mobile bottom sheet) and accessibility
+## How the assignment requirements are met
+### Form and validation
+- The `<form>` uses `novalidate`, and its validation lives in `validateSearch()` in `utils.js`.
+- Inline error messages use `aria-invalid` and a red border, and focus moves to the first invalid field.
+- Errors clear on `input`.
+- While loading, the submit button is disabled and shows a spinner, and a result count is shown on success.
+
+### Fetch and JSON
+- **Calls:** `fetch()` with `async`/`await` in `api.js` for Nominatim, the OSM Notes API (GeoJSON) and the local `data/noteTypes.json`.
+- **Normalization:** each response is turned into a simple note object.
+- **Errors:** a custom `ApiError` class gives each failure a type (`not-found`, `too-large`, `network`, `http`), so every failure gets its own message and a Retry button.
+
+### JavaScript events
+| Event | Where |
+| --- | --- |
+| `submit` | Notes form: validate and search |
+| `input` | Area and Max results: clear the inline error while typing |
+| `change` | Status chips and Older than: re-filter results without refetching |
+| `click` | Map controls, Notes link, Use my location, Clear location, note cards (event delegation), View, map markers, Back, Copy link, Retry, Widen search, Search this area, menu button, sheet handle |
+| `moveend` (Leaflet) | Map: show the "Search this area" button |
+| `keydown` | Enter/Space on note cards; Escape closes the mobile menu |
+
+### Other browser APIs
+- **Geolocation API:** "My location" and "Use my location".
+- **Clipboard API:** "Copy link".
+- **FormData:** reading the form.
+
+## Known limitations
+- **1,000 notes per request.** The Notes API returns at most 1,000 notes. In busy areas, Closed/All (`closed=-1`) can hit this cap, so the very oldest notes might not be included.
+- **Search area limited to 0.5° × 0.5°.** A big place like "India" is searched only around its centre.
+- **Type detection is simple.** It uses English keyword matching, so many notes end up as "Other", and notes in other languages are usually not recognised.
+- **Fixed box around your location.** "Use my location" searches a fixed ~0.1° (about 11 km) box around you.
+- **"Search this area" and zooming in.** The button only appears when you move away from, or zoom out of, the searched area. Zooming further into it doesn't show the button.
+- **Copy link needs a secure context.** It works on `localhost` and `https`, but not from a LAN IP over plain `http`.
+- **Not production-ready.** The Tailwind Play CDN is meant for prototypes. A real site should use a Tailwind build step.
+- **Light use only.** Nominatim and the OSM tile servers have usage policies that only allow light, non-commercial use like this prototype.
+
+## Future work
+- Log in with an OSM account (OAuth 2) to **comment on, close or reopen notes** directly.
+- **Add new notes** from the map.
+- **Saved settings** (home area, default filters) and shareable URLs with the filters in them.
+- **Structured note tags** stored in the OSM database (see issue #5294), instead of keyword guessing.
+- Marker clustering for areas with many notes.
+- Multi-language type detection.
+- Routing to a note, and an offline mode for field mapping.
+
+## Manual test checklist
+1. **Layout:** at 1440 px you see the navbar, the 360 px sidebar, the map of Bengaluru, 8 map controls and the footer attribution.
+2. **Map controls:** + and − zoom, Layers switches the tiles, My location flies to you (or shows the "denied" message), and Legend/Share/Add note/Query show the "Not part of this prototype" tooltip.
+3. **Validation:**
+   - An empty area shows an inline error, which clears while you type.
+   - `a` shows "at least 2 characters".
+   - A Max results of `0`, `150` or blank shows "1 to 100".
+   - Use my location makes an empty area valid.
+4. **Search:** `Indiranagar, Bengaluru` shows skeleton cards, then a result count and cards sorted oldest first. Badge colours match the ages, and markers appear on the map.
+5. **Card and marker linking:** a card click highlights the card and flies to its marker. A marker click highlights its card and scrolls to it.
+6. **Detail view:** View shows the full report and comments. Open on OpenStreetMap opens a new tab, Copy link shows "Copied!", and Back returns to the same card.
+7. **Re-filtering:** Open → All makes one new `closed=-1` request. Changing "Older than" or switching back to Open makes no request.
+8. **Empty state:** strict filters on a small area show "No … notes … here" and a **Widen search** button, which grows the area until the limit.
+9. **Errors and Retry:**
+   - `zzqqxx` shows Area not found.
+   - DevTools Offline shows No connection, and Retry works once you're back online.
+   - Blocked location shows Location blocked.
+10. **Search this area:** drag the map away from or zoom out of the results and the button appears. Clicking it searches the visible area. Clicking a card does not make it appear.
+11. **Mobile (390 px):**
+    - The bottom sheet is at most 60% of the screen and the handle folds it.
+    - Only zoom, locate and layers controls show.
+    - The menu button opens the dropdown and Escape closes it.
+12. **Keyboard:** Tab through everything and check the green focus rings. Enter on a card selects it, and focus goes to Back when a note opens.

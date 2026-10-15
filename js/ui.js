@@ -34,7 +34,7 @@ export function getFormValues(form) {
 }
 
 /** Show an inline error message under a field and mark the field invalid. */
-export function showFieldError(name, message) {
+function showFieldError(name, message) {
   const input = document.getElementById(FIELDS[name].input);
   const error = document.getElementById(FIELDS[name].error);
   error.textContent = message;
@@ -129,7 +129,7 @@ export function renderResults(shown, matching) {
 }
 
 /** Clear the count and list (e.g. when a new search starts). */
-export function clearResults() {
+function clearResults() {
   document.getElementById('result-count').textContent = '';
   document.getElementById('results-state').innerHTML = '';
   document.getElementById('results-list').innerHTML = '';

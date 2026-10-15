@@ -45,7 +45,6 @@ export function initMap() {
   });
   layers[currentLayer].addTo(map);
   markerLayer = L.layerGroup().addTo(map);
-  return map;
 }
 
 /** Zoom the map in or out by one level. */
@@ -96,7 +95,7 @@ export async function locateUser() {
 }
 
 /** Show a short message at the top of the map for a few seconds. */
-export function showMapMessage(text) {
+function showMapMessage(text) {
   const box = document.getElementById('map-message');
   box.textContent = text;
   box.classList.remove('hidden');
