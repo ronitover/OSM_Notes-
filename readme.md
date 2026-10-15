@@ -78,7 +78,7 @@ Evidence: GitHub issues openstreetmap-website [#3584](https://github.com/openstr
 - After you pan or zoom to a different area, a button appears on the map that searches the visible area.
 
 **Responsive**
-- Below 768 px, the sidebar becomes a foldable **bottom sheet** (max 60% height) over a full-screen map, and the map controls reduce to zoom, locate and layers.
+- Below 768 px, the sidebar becomes a foldable **bottom sheet** (max 60% height) over a full-screen map, and the map controls reduce to zoom, locate and layers. After a search, the sheet scrolls to the results.
 - Below 1024 px, the navbar links collapse into a **menu button**.
 
 **Accessibility**

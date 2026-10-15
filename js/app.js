@@ -15,7 +15,7 @@ import {
   showNotesPanel, getFormValues, showFormErrors, clearFieldError,
   setLocationStatus, setLocatingButton, renderResults, highlightCard,
   showNoteDetail, flashCopyButton, setLoading, renderEmptyState, renderError,
-  setSearchAreaButton, setMenuOpen, setSheetCollapsed
+  setSearchAreaButton, setMenuOpen, setSheetCollapsed, scrollToResultsOnMobile
 } from './ui.js';
 
 // ---------- App state ----------
@@ -93,6 +93,7 @@ async function useMyLocation() {
     setLocationStatus(null);
     state.retry = useMyLocation;
     renderError(error);
+    scrollToResultsOnMobile();
   } finally {
     setLocatingButton(false);
   }
@@ -163,6 +164,7 @@ async function search(values, bbox = null) {
     fitToBbox(bbox);
     setLoading(false);
     updateResults(values);
+    scrollToResultsOnMobile();
   } catch (error) {
     // Forget old results, show the right error panel; Retry repeats this exact search
     setLoading(false);
@@ -171,6 +173,7 @@ async function search(values, bbox = null) {
     showNoteMarkers([], selectNoteFromMarker);
     state.retry = () => search(values, bbox);
     renderError(error);
+    scrollToResultsOnMobile();
   } finally {
     state.loading = false;
   }

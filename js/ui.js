@@ -323,3 +323,13 @@ export function setSheetCollapsed(isCollapsed) {
   handle.setAttribute('aria-expanded', String(!isCollapsed));
   handle.setAttribute('aria-label', isCollapsed ? 'Show notes panel' : 'Hide notes panel');
 }
+
+/**
+ * On mobile the form fills the bottom sheet, so after a search scroll the
+ * sheet down to the results. (On desktop the results are already visible.)
+ */
+export function scrollToResultsOnMobile() {
+  if (window.innerWidth < 768) {
+    document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
