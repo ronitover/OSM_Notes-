@@ -61,3 +61,60 @@ export function validateSearch(values, hasLocation) {
 
   return errors;
 }
+
+// ---------- Dates ----------
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * Turn an OSM date like "2019-05-12 10:22:33 UTC" into a Date.
+ * "2019-05-12 10:22:33 UTC" -> "2019-05-12T10:22:33Z" (ISO format JS understands)
+ */
+export function parseOsmDate(str) {
+  return new Date(str.replace(' UTC', 'Z').replace(' ', 'T'));
+}
+
+/** Whole days between a date and now. */
+export function ageInDays(date) {
+  return Math.floor((Date.now() - date.getTime()) / MS_PER_DAY);
+}
+
+// ---------- Bounding boxes ----------
+// A bbox is { minLon, minLat, maxLon, maxLat } (west, south, east, north).
+
+/**
+ * Make sure a bbox is at most maxSize degrees wide and tall,
+ * keeping the same centre. The Notes API rejects big areas (HTTP 400).
+ */
+export function clampBbox(bbox, maxSize = 0.5) {
+  const centerLon = (bbox.minLon + bbox.maxLon) / 2;
+  const centerLat = (bbox.minLat + bbox.maxLat) / 2;
+  const halfWidth = Math.min(bbox.maxLon - bbox.minLon, maxSize) / 2;
+  const halfHeight = Math.min(bbox.maxLat - bbox.minLat, maxSize) / 2;
+
+  return {
+    minLon: centerLon - halfWidth,
+    minLat: centerLat - halfHeight,
+    maxLon: centerLon + halfWidth,
+    maxLat: centerLat + halfHeight
+  };
+}
+
+/** A square bbox of "size" degrees around a point (used for "my location"). */
+export function bboxAroundPoint(lat, lon, size = 0.1) {
+  const half = size / 2;
+  return { minLon: lon - half, minLat: lat - half, maxLon: lon + half, maxLat: lat + half };
+}
+
+// ---------- Note types ----------
+
+/**
+ * Guess what kind of problem a note is about by looking for keywords.
+ * "types" comes from data/noteTypes.json: [{ type, keywords: [] }, ...].
+ * The first type with a matching keyword wins; otherwise 'Other'.
+ */
+export function detectType(text, types) {
+  const lower = text.toLowerCase();
+  const match = types.find((t) => t.keywords.some((word) => lower.includes(word)));
+  return match ? match.type : 'Other';
+}

@@ -4,7 +4,8 @@
 */
 
 import { initMap, zoomIn, zoomOut, locateUser, toggleLayer, showDummyTooltip } from './map.js';
-import { validateSearch } from './utils.js';
+import { validateSearch, bboxAroundPoint } from './utils.js';
+import { geocodeArea, fetchNotes, loadNoteTypes, normalizeNote } from './api.js';
 import {
   showNotesPanel, getFormValues, showFormErrors, showFieldError, clearFieldError,
   setLocationStatus, setLocatingButton
@@ -12,7 +13,9 @@ import {
 
 // ---------- App state ----------
 const state = {
-  location: null // { lat, lon } once the user shares their location
+  location: null, // { lat, lon } once the user shares their location
+  noteTypes: [],  // loaded once from data/noteTypes.json
+  notes: []       // normalized notes from the last search
 };
 
 // ---------- Map ----------
@@ -68,8 +71,8 @@ document.getElementById('btn-clear-location').addEventListener('click', () => {
 document.getElementById('area').addEventListener('input', () => clearFieldError('area'));
 document.getElementById('max-results').addEventListener('input', () => clearFieldError('maxResults'));
 
-// Form submit: validate, then (for now) log the values
-form.addEventListener('submit', (event) => {
+// Form submit: validate, then find the area and fetch its notes
+form.addEventListener('submit', async (event) => {
   event.preventDefault(); // stay on the page, we handle the search in JS
 
   const values = getFormValues(form);
@@ -77,7 +80,30 @@ form.addEventListener('submit', (event) => {
   showFormErrors(errors);
   if (Object.keys(errors).length > 0) return; // stop if anything is invalid
 
-  // A typed area wins over the shared location
-  const search = { ...values, location: values.area ? null : state.location };
-  console.log('Valid search:', search);
+  try {
+    // 1. Work out the bounding box: typed area wins over shared location
+    let bbox;
+    if (values.area) {
+      const place = await geocodeArea(values.area);
+      bbox = place.bbox;
+    } else {
+      bbox = bboxAroundPoint(state.location.lat, state.location.lon);
+    }
+
+    // 2. Load note types once (local JSON file)
+    if (state.noteTypes.length === 0) {
+      state.noteTypes = await loadNoteTypes();
+    }
+
+    // 3. Fetch notes: closed=0 for only open, closed=-1 for open + closed
+    const closedParam = values.status === 'open' ? 0 : -1;
+    const features = await fetchNotes(bbox, closedParam);
+
+    // 4. Convert to our simple note objects
+    state.notes = features.map((feature) => normalizeNote(feature, state.noteTypes));
+    console.log(`Found ${state.notes.length} notes:`, state.notes);
+  } catch (error) {
+    // Error panels come in Step 6; for now just log the typed error
+    console.error(`Search failed [${error.kind || 'unknown'}]:`, error.message);
+  }
 });

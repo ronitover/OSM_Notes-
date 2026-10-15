@@ -29,9 +29,11 @@ Then open the URL it prints (usually http://localhost:3000). You can also use th
 index.html          page layout (navbar, sidebar, map, controls, footer)
 css/styles.css      small custom styles
 js/app.js           entry point: wires events, holds state
+js/api.js           fetch calls (Nominatim, Notes API, local JSON) + normalization
 js/map.js           Leaflet map, tile layers, map controls
 js/ui.js            sidebar rendering: notes panel, form errors
-js/utils.js         helpers: geolocation promise, form validation
+js/utils.js         helpers: geolocation, validation, dates, bbox, type detection
+data/noteTypes.json note types and their keywords (used to label notes)
 CONTEXT.md          project brief / scope
 ```
 
@@ -54,6 +56,13 @@ CONTEXT.md          project brief / scope
   - Errors appear inline under each field, the field gets a red border, and focus moves to the first bad field.
   - Errors clear as soon as you start typing (`input` event).
   - If location is denied, the message appears under the area field.
+- **Fetching notes** (on a valid submit):
+  1. A typed area is turned into a bounding box with **Nominatim**. A shared location uses a ~0.1° box around you instead.
+  2. The box is clamped to at most 0.5° × 0.5°, because the Notes API rejects big areas with HTTP 400.
+  3. Notes come from the **OSM Notes API** (`closed=0` for Open, `closed=-1` for Closed/All).
+  4. Each note is normalized into a simple object: id, lat/lon, status, created date, age in days, report text, comments and URL.
+  5. A **type** (Missing road, Wrong name, Closed shop, …) is guessed by keyword matching against `data/noteTypes.json`.
+  6. Errors are typed (`not-found`, `too-large`, `network`, `http`), so each one can get its own message.
 
 ## JavaScript events used (so far)
 | Event | Where |
@@ -67,8 +76,14 @@ CONTEXT.md          project brief / scope
 | --- | --- |
 | Standard map tiles | `https://tile.openstreetmap.org/{z}/{x}/{y}.png` |
 | Humanitarian map tiles | `https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png` |
+| Geocoding (area → coordinates) | `https://nominatim.openstreetmap.org/search?q=<area>&format=json&limit=1` |
+| Notes in a bounding box | `https://api.openstreetmap.org/api/0.6/notes.json?bbox=<minLon>,<minLat>,<maxLon>,<maxLat>&limit=1000&closed=<n>` |
+| Note types (local JSON) | `data/noteTypes.json` |
+
+All APIs are free and need no key. Nominatim is called only when the form is submitted (never on each keystroke), to respect its 1 request/second limit.
 
 ## Progress
 - [x] Step 1: Project scaffold and OSM-style layout shell
 - [x] Step 2: Leaflet map with OSM tiles and map controls
 - [x] Step 3: Notes filter form with validation and feedback
+- [x] Step 4: Fetch and normalize notes from the OSM Notes API

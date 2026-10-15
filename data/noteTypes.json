@@ -1,0 +1,34 @@
+[
+  {
+    "type": "Missing road",
+    "keywords": ["missing road", "road missing", "new road", "street missing", "missing street", "road not on map", "unmapped road", "highway"]
+  },
+  {
+    "type": "Wrong name",
+    "keywords": ["wrong name", "name is", "misspelled", "spelling", "renamed", "incorrect name", "name should be", "correct name"]
+  },
+  {
+    "type": "Closed shop",
+    "keywords": ["closed down", "permanently closed", "no longer exists", "does not exist", "doesn't exist", "shut down", "moved to", "demolished", "not here anymore"]
+  },
+  {
+    "type": "New building",
+    "keywords": ["building", "construction", "new apartment", "under construction", "new block", "house"]
+  },
+  {
+    "type": "Path / footway",
+    "keywords": ["footway", "footpath", "path", "sidewalk", "pavement", "trail", "track", "cycleway", "steps", "stairs"]
+  },
+  {
+    "type": "POI missing",
+    "keywords": ["shop", "restaurant", "cafe", "hotel", "hospital", "school", "atm", "bank", "temple", "church", "mosque", "pharmacy", "park", "bus stop"]
+  },
+  {
+    "type": "Address",
+    "keywords": ["address", "house number", "postcode", "post code", "pin code", "pincode", "zip"]
+  },
+  {
+    "type": "Other",
+    "keywords": []
+  }
+]
