@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OSM Notes+ | Find old map notes</title>
+  <meta name="description" content="Student redesign concept of openstreetmap.org focused on finding and filtering map notes." />
+
+  <!-- Tailwind CSS (Play CDN) - utility classes, no build step -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Leaflet 1.9.4 map library (CSS + JS) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Small custom styles that Tailwind can't easily handle -->
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+
+<!-- Full-height page: navbar on top, sidebar + map fill the rest -->
+<body class="h-screen flex flex-col bg-white text-gray-900 overflow-hidden">
+
+  <!-- ================= NAVBAR ================= -->
+  <header class="h-14 shrink-0 flex items-center justify-between px-3 bg-white border-b border-gray-300 z-[1000]">
+
+    <!-- Left side: logo + main links -->
+    <nav class="flex items-center gap-1" aria-label="Main navigation">
+      <!-- Generic map icon (NOT the official OSM logo) -->
+      <a href="#" class="flex items-center gap-2 mr-3" aria-label="OSM Notes+ home">
+        <svg class="w-8 h-8" viewBox="0 0 32 32" aria-hidden="true">
+          <rect width="32" height="32" rx="6" fill="#15803d" />
+          <path d="M6 9l6-2 8 3 6-2v15l-6 2-8-3-6 2z" fill="#fff" />
+          <path d="M12 7v15M20 10v15" stroke="#15803d" stroke-width="1.5" />
+        </svg>
+        <span class="font-semibold text-lg">OSM Notes+</span>
+      </a>
+
+      <!-- Dummy links that copy the OSM navbar -->
+      <a href="#" class="nav-link">Edit ▾</a>
+      <a href="#" class="nav-link">History</a>
+      <a href="#" class="nav-link">Export</a>
+      <!-- Highlighted link: the feature this project adds -->
+      <a href="#" id="nav-notes" class="px-3 py-1.5 rounded text-sm font-semibold text-white bg-green-700 hover:bg-green-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-1">Notes</a>
+    </nav>
+
+    <!-- Right side: secondary dummy links -->
+    <nav class="flex items-center gap-1" aria-label="Community and account">
+      <a href="#" class="nav-link">GPS Traces</a>
+      <a href="#" class="nav-link">User Diaries</a>
+      <a href="#" class="nav-link">Communities</a>
+      <a href="#" class="nav-link">Help</a>
+      <a href="#" class="nav-link">About</a>
+      <a href="#" class="ml-2 px-3 py-1.5 rounded text-sm border border-gray-300 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500">Log In</a>
+      <a href="#" class="px-3 py-1.5 rounded text-sm border border-gray-300 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500">Sign Up</a>
+    </nav>
+  </header>
+
+  <!-- ================= MAIN AREA ================= -->
+  <div class="flex flex-1 min-h-0">
+
+    <!-- ----- Left sidebar (360px) ----- -->
+    <aside id="sidebar" class="w-[360px] shrink-0 flex flex-col bg-gray-100 border-r border-gray-300 z-[500]" aria-label="Sidebar">
+
+      <!-- Scrollable panel content; JS will swap what's inside -->
+      <section id="sidebar-content" class="flex-1 overflow-y-auto p-4" aria-live="polite">
+
+        <!-- Placeholder welcome card (replaced by the Notes panel in Step 3) -->
+        <article class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+          <h1 class="text-lg font-semibold mb-2">Welcome to OSM Notes+</h1>
+          <p class="text-sm text-gray-700 mb-3">
+            Map notes are reports of mistakes on the map. Many stay open for years.
+            OSM Notes+ helps you find the <strong>oldest unresolved notes</strong> in your area so you can fix them.
+          </p>
+          <p class="text-sm text-gray-500">Click <strong class="text-green-700">Notes</strong> in the top bar to start.</p>
+        </article>
+      </section>
+
+      <!-- Attribution / disclaimer footer -->
+      <footer class="shrink-0 px-4 py-2 text-xs text-gray-500 border-t border-gray-300 bg-gray-100">
+        <p>© <a href="https://www.openstreetmap.org/copyright" class="underline hover:text-gray-700" target="_blank" rel="noopener">OpenStreetMap contributors</a></p>
+        <p>Student project — not affiliated with OpenStreetMap</p>
+      </footer>
+    </aside>
+
+    <!-- ----- Map area ----- -->
+    <main class="relative flex-1">
+      <!-- Leaflet draws the map inside this div (Step 2) -->
+      <div id="map" class="absolute inset-0 bg-gray-200" aria-label="Map"></div>
+
+      <!-- Right-side map control stack (buttons only for now) -->
+      <div class="absolute top-3 right-3 z-[400] flex flex-col gap-2" role="toolbar" aria-label="Map controls">
+
+        <!-- Zoom group -->
+        <div class="flex flex-col bg-white rounded shadow border border-gray-300 overflow-hidden">
+          <button id="btn-zoom-in" class="map-btn border-b border-gray-200" aria-label="Zoom in" title="Zoom in">
+            <svg viewBox="0 0 20 20" class="w-5 h-5" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2" /></svg>
+          </button>
+          <button id="btn-zoom-out" class="map-btn" aria-label="Zoom out" title="Zoom out">
+            <svg viewBox="0 0 20 20" class="w-5 h-5" aria-hidden="true"><path d="M4 10h12" stroke="currentColor" stroke-width="2" /></svg>
+          </button>
+        </div>
+
+        <!-- My location -->
+        <button id="btn-locate" class="map-btn map-btn-single" aria-label="Show my location" title="Show my location">
+          <svg viewBox="0 0 20 20" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10" cy="10" r="5" /><circle cx="10" cy="10" r="1.5" fill="currentColor" /><path d="M10 1v4M10 15v4M1 10h4M15 10h4" /></svg>
+        </button>
+
+        <!-- Layers -->
+        <button id="btn-layers" class="map-btn map-btn-single" aria-label="Change map layer" title="Layers">
+          <svg viewBox="0 0 20 20" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M10 3l8 4-8 4-8-4z" /><path d="M2 11l8 4 8-4" /></svg>
+        </button>
+
+        <!-- Legend (not part of prototype) -->
+        <button id="btn-legend" class="map-btn map-btn-single" data-dummy aria-label="Map legend" title="Legend">
+          <svg viewBox="0 0 20 20" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 5h10M7 10h10M7 15h10" /><circle cx="3.5" cy="5" r="1" fill="currentColor" /><circle cx="3.5" cy="10" r="1" fill="currentColor" /><circle cx="3.5" cy="15" r="1" fill="currentColor" /></svg>
+        </button>
+
+        <!-- Share (not part of prototype) -->
+        <button id="btn-share" class="map-btn map-btn-single" data-dummy aria-label="Share" title="Share">
+          <svg viewBox="0 0 20 20" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="15" cy="4.5" r="2" /><circle cx="5" cy="10" r="2" /><circle cx="15" cy="15.5" r="2" /><path d="M7 9l6-3.5M7 11l6 3.5" /></svg>
+        </button>
+
+        <!-- Add a note (not part of prototype) -->
+        <button id="btn-add-note" class="map-btn map-btn-single" data-dummy aria-label="Add a note to the map" title="Add a note">
+          <svg viewBox="0 0 20 20" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 3h14v10H9l-4 4v-4H3z" /><path d="M10 6v4M8 8h4" /></svg>
+        </button>
+
+        <!-- Query features (not part of prototype) -->
+        <button id="btn-query" class="map-btn map-btn-single" data-dummy aria-label="Query features" title="Query features">
+          <svg viewBox="0 0 20 20" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 2l11 8-5 1-2 5z" /></svg>
+        </button>
+      </div>
+    </main>
+  </div>
+
+  <!-- App entry point (ES module) -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

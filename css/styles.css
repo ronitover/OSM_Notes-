@@ -1,0 +1,45 @@
+/*
+  styles.css - small custom styles for OSM Notes+.
+  Most styling is done with Tailwind classes in index.html.
+  Only reusable bits that would repeat many Tailwind classes live here.
+*/
+
+/* Plain grey navbar links (Edit, History, Help, ...) */
+.nav-link {
+  padding: 0.375rem 0.625rem;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  color: #374151; /* gray-700 */
+}
+.nav-link:hover {
+  background-color: #f3f4f6; /* gray-100 */
+  color: #111827;            /* gray-900 */
+}
+
+/* Square icon buttons in the right-side map control stack */
+.map-btn {
+  width: 2.25rem;
+  height: 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #374151;
+  background: #fff;
+}
+.map-btn:hover {
+  background-color: #f3f4f6;
+}
+
+/* Standalone control buttons get their own border and shadow */
+.map-btn-single {
+  border: 1px solid #d1d5db; /* gray-300 */
+  border-radius: 0.25rem;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.1);
+}
+
+/* Visible green focus ring for keyboard users on all links and buttons */
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid #15803d; /* green-700 */
+  outline-offset: 2px;
+}
