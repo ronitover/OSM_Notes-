@@ -87,6 +87,9 @@
       <!-- Leaflet draws the map inside this div (Step 2) -->
       <div id="map" class="absolute inset-0 bg-gray-200" aria-label="Map"></div>
 
+      <!-- Short status messages shown over the map (location, layer change) -->
+      <div id="map-message" class="hidden absolute top-3 left-1/2 -translate-x-1/2 z-[450] max-w-xs px-3 py-2 rounded bg-gray-900/85 text-white text-sm text-center shadow" role="status" aria-live="polite"></div>
+
       <!-- Right-side map control stack (buttons only for now) -->
       <div class="absolute top-3 right-3 z-[400] flex flex-col gap-2" role="toolbar" aria-label="Map controls">
 
@@ -129,6 +132,11 @@
         <button id="btn-query" class="map-btn map-btn-single" data-dummy aria-label="Query features" title="Query features">
           <svg viewBox="0 0 20 20" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 2l11 8-5 1-2 5z" /></svg>
         </button>
+
+        <!-- Tooltip for the buttons above that are only for looks -->
+        <div id="control-tooltip" class="hidden absolute right-full mr-2 -translate-y-1/2 whitespace-nowrap px-2 py-1 rounded bg-gray-900 text-white text-xs shadow" role="status">
+          Not part of this prototype
+        </div>
       </div>
     </main>
   </div>

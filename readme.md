@@ -29,8 +29,25 @@ Then open the URL it prints (usually http://localhost:3000). You can also use th
 index.html          page layout (navbar, sidebar, map, controls, footer)
 css/styles.css      small custom styles
 js/app.js           entry point: wires events, holds state
+js/map.js           Leaflet map, tile layers, map controls
 CONTEXT.md          project brief / scope
 ```
 
+## Features so far
+- OSM-style layout: navbar, 360 px sidebar, full-screen map, right-side control stack, attribution footer.
+- Leaflet map centred on Bengaluru with OpenStreetMap tiles (attribution always visible).
+- Custom map controls:
+  - **Zoom + / −**
+  - **My location**: uses the browser Geolocation API, flies to you and shows a blue dot. If permission is denied, you get a friendly message.
+  - **Layers**: switches between Standard and Humanitarian (HOT) tiles.
+  - Legend, Share, Add note and Query are for looks only and show a "Not part of this prototype" tooltip.
+
+## APIs used
+| Purpose | Endpoint |
+| --- | --- |
+| Standard map tiles | `https://tile.openstreetmap.org/{z}/{x}/{y}.png` |
+| Humanitarian map tiles | `https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png` |
+
 ## Progress
 - [x] Step 1: Project scaffold and OSM-style layout shell
+- [x] Step 2: Leaflet map with OSM tiles and map controls
