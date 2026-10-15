@@ -4,6 +4,8 @@
   available here as the global variable "L".
 */
 
+import { getUserPosition } from './utils.js';
+
 // Starting view: Bengaluru
 const START_CENTER = [12.9716, 77.5946];
 const START_ZOOM = 13;
@@ -55,45 +57,34 @@ export function toggleLayer() {
 }
 
 /**
- * Ask the browser for the user's position (Geolocation API),
- * then fly there and show a blue dot. Shows a friendly message on failure.
+ * Get the user's position, fly there and show a blue dot.
+ * Returns { lat, lon } on success. On failure it shows a friendly
+ * message and throws the error so the caller can react too.
  */
-export function locateUser() {
-  if (!('geolocation' in navigator)) {
-    showMapMessage('Your browser does not support location.');
-    return;
-  }
-
+export async function locateUser() {
   showMapMessage('Finding your location…');
 
-  navigator.geolocation.getCurrentPosition(
-    // Success: move the map to the user's position
-    (position) => {
-      const latlng = [position.coords.latitude, position.coords.longitude];
-      map.flyTo(latlng, 15);
+  try {
+    const position = await getUserPosition();
+    const latlng = [position.lat, position.lon];
+    map.flyTo(latlng, 15);
 
-      // Replace any old dot with a new one
-      if (locationMarker) locationMarker.remove();
-      locationMarker = L.circleMarker(latlng, {
-        radius: 8,
-        color: '#ffffff',
-        weight: 2,
-        fillColor: '#2563eb', // blue-600
-        fillOpacity: 1
-      }).addTo(map).bindTooltip('You are here');
+    // Replace any old dot with a new one
+    if (locationMarker) locationMarker.remove();
+    locationMarker = L.circleMarker(latlng, {
+      radius: 8,
+      color: '#ffffff',
+      weight: 2,
+      fillColor: '#2563eb', // blue-600
+      fillOpacity: 1
+    }).addTo(map).bindTooltip('You are here');
 
-      showMapMessage('Showing your location.');
-    },
-    // Error: explain what went wrong in plain words
-    (error) => {
-      if (error.code === error.PERMISSION_DENIED) {
-        showMapMessage('Location permission was denied. You can still search by area name.');
-      } else {
-        showMapMessage('Could not get your location. Please try again.');
-      }
-    },
-    { timeout: 10000 }
-  );
+    showMapMessage('Showing your location.');
+    return position;
+  } catch (error) {
+    showMapMessage(error.message);
+    throw error;
+  }
 }
 
 /** Show a short message at the top of the map for a few seconds. */

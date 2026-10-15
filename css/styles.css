@@ -37,6 +37,47 @@
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.1);
 }
 
+/* ---------- Notes form ---------- */
+
+/* Status chips: the real radio input is hidden (sr-only) and the span is styled */
+.chip {
+  cursor: pointer;
+}
+.chip-face {
+  display: inline-block;
+  padding: 0.375rem 0.875rem;
+  border: 1px solid #d1d5db;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  background: #fff;
+  color: #374151;
+}
+.chip-face:hover {
+  background: #f3f4f6;
+}
+/* Checked chip = green (":checked + span" = the span right after a checked radio) */
+.chip input:checked + .chip-face {
+  background: #15803d;
+  border-color: #15803d;
+  color: #fff;
+}
+/* Keyboard focus on the hidden radio shows a ring on the chip */
+.chip input:focus-visible + .chip-face {
+  outline: 2px solid #15803d;
+  outline-offset: 2px;
+}
+
+/* Inline error text under a field */
+.field-error {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: #b91c1c; /* red-700 */
+}
+/* Red border on a field that has an error */
+[aria-invalid="true"] {
+  border-color: #b91c1c !important;
+}
+
 /* Visible green focus ring for keyboard users on all links and buttons */
 a:focus-visible,
 button:focus-visible {

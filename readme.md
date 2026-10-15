@@ -30,6 +30,8 @@ index.html          page layout (navbar, sidebar, map, controls, footer)
 css/styles.css      small custom styles
 js/app.js           entry point: wires events, holds state
 js/map.js           Leaflet map, tile layers, map controls
+js/ui.js            sidebar rendering: notes panel, form errors
+js/utils.js         helpers: geolocation promise, form validation
 CONTEXT.md          project brief / scope
 ```
 
@@ -41,6 +43,24 @@ CONTEXT.md          project brief / scope
   - **My location**: uses the browser Geolocation API, flies to you and shows a blue dot. If permission is denied, you get a friendly message.
   - **Layers**: switches between Standard and Humanitarian (HOT) tiles.
   - Legend, Share, Add note and Query are for looks only and show a "Not part of this prototype" tooltip.
+- **Notes filter form** in the sidebar ("Find old map notes"). It is shown on page load and when you click **Notes**:
+  - Area or city (text), plus a **Use my location** button.
+  - Status chips: Open / Closed / All.
+  - Older than: Any age, 6 months, 1 year, 3 years.
+  - Max results: 1–100 (default 20).
+- **Validation and feedback**:
+  - Area is required (2–100 characters) unless you shared your location. If you type an area, it is used instead of your location.
+  - Max results must be a whole number from 1 to 100.
+  - Errors appear inline under each field, the field gets a red border, and focus moves to the first bad field.
+  - Errors clear as soon as you start typing (`input` event).
+  - If location is denied, the message appears under the area field.
+
+## JavaScript events used (so far)
+| Event | Where |
+| --- | --- |
+| `submit` | Notes form: validate and search |
+| `input` | Area and Max results: clear the inline error while typing |
+| `click` | Map controls, Notes link, Use my location, Clear location |
 
 ## APIs used
 | Purpose | Endpoint |
@@ -51,3 +71,4 @@ CONTEXT.md          project brief / scope
 ## Progress
 - [x] Step 1: Project scaffold and OSM-style layout shell
 - [x] Step 2: Leaflet map with OSM tiles and map controls
+- [x] Step 3: Notes filter form with validation and feedback

@@ -40,7 +40,7 @@
       <a href="#" class="nav-link">History</a>
       <a href="#" class="nav-link">Export</a>
       <!-- Highlighted link: the feature this project adds -->
-      <a href="#" id="nav-notes" class="px-3 py-1.5 rounded text-sm font-semibold text-white bg-green-700 hover:bg-green-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-1">Notes</a>
+      <a href="#" id="nav-notes" aria-current="page" class="px-3 py-1.5 rounded text-sm font-semibold text-white bg-green-700 hover:bg-green-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-1">Notes</a>
     </nav>
 
     <!-- Right side: secondary dummy links -->
@@ -61,18 +61,92 @@
     <!-- ----- Left sidebar (360px) ----- -->
     <aside id="sidebar" class="w-[360px] shrink-0 flex flex-col bg-gray-100 border-r border-gray-300 z-[500]" aria-label="Sidebar">
 
-      <!-- Scrollable panel content; JS will swap what's inside -->
-      <section id="sidebar-content" class="flex-1 overflow-y-auto p-4" aria-live="polite">
+      <!-- Scrollable panel content -->
+      <section id="sidebar-content" class="flex-1 overflow-y-auto p-4">
 
-        <!-- Placeholder welcome card (replaced by the Notes panel in Step 3) -->
-        <article class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
-          <h1 class="text-lg font-semibold mb-2">Welcome to OSM Notes+</h1>
-          <p class="text-sm text-gray-700 mb-3">
-            Map notes are reports of mistakes on the map. Many stay open for years.
-            OSM Notes+ helps you find the <strong>oldest unresolved notes</strong> in your area so you can fix them.
+        <!-- ===== Notes panel: search form (+ results in later steps) ===== -->
+        <section id="notes-panel" aria-labelledby="notes-title">
+          <h1 id="notes-title" class="text-lg font-semibold">Find old map notes</h1>
+          <p class="text-sm text-gray-600 mb-4">
+            Notes are reports of mistakes on the map. Find the oldest unresolved ones near you and help fix them.
           </p>
-          <p class="text-sm text-gray-500">Click <strong class="text-green-700">Notes</strong> in the top bar to start.</p>
-        </article>
+
+          <!-- novalidate: we show our own friendly error messages instead of the browser's -->
+          <form id="notes-form" class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm space-y-4" novalidate>
+
+            <!-- Area or city -->
+            <div>
+              <label for="area" class="block text-sm font-medium mb-1">Area or city</label>
+              <input id="area" name="area" type="text" placeholder="e.g. Indiranagar, Bengaluru" autocomplete="off"
+                     aria-describedby="area-error"
+                     class="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-green-600" />
+              <p id="area-error" class="field-error hidden"></p>
+
+              <!-- Use my location (counts as a valid area) -->
+              <div class="mt-2 flex items-center gap-2">
+                <button id="btn-use-location" type="button"
+                        class="inline-flex items-center gap-1 text-sm text-green-700 font-medium hover:underline focus:outline-none">
+                  <svg viewBox="0 0 20 20" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10" cy="10" r="5" /><circle cx="10" cy="10" r="1.5" fill="currentColor" /><path d="M10 1v4M10 15v4M1 10h4M15 10h4" /></svg>
+                  <span>Use my location</span>
+                </button>
+              </div>
+              <!-- Shown once the location is shared -->
+              <p id="location-status" class="hidden mt-2 items-center gap-2 text-xs text-green-800 bg-green-50 border border-green-200 rounded px-2 py-1">
+                <span id="location-text"></span>
+                <button id="btn-clear-location" type="button" class="ml-auto font-semibold hover:underline" aria-label="Stop using my location">Clear</button>
+              </p>
+            </div>
+
+            <!-- Status chips (radio buttons styled as chips) -->
+            <fieldset>
+              <legend class="block text-sm font-medium mb-1">Status</legend>
+              <div class="flex gap-2">
+                <label class="chip">
+                  <input type="radio" name="status" value="open" class="sr-only" checked />
+                  <span class="chip-face">Open</span>
+                </label>
+                <label class="chip">
+                  <input type="radio" name="status" value="closed" class="sr-only" />
+                  <span class="chip-face">Closed</span>
+                </label>
+                <label class="chip">
+                  <input type="radio" name="status" value="all" class="sr-only" />
+                  <span class="chip-face">All</span>
+                </label>
+              </div>
+            </fieldset>
+
+            <div class="flex gap-3">
+              <!-- Older than (value = number of days) -->
+              <div class="flex-1">
+                <label for="older-than" class="block text-sm font-medium mb-1">Older than</label>
+                <select id="older-than" name="olderThan"
+                        class="w-full rounded border border-gray-300 bg-white px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600">
+                  <option value="0">Any age</option>
+                  <option value="182">6 months</option>
+                  <option value="365">1 year</option>
+                  <option value="1095">3 years</option>
+                </select>
+              </div>
+
+              <!-- Max results -->
+              <div class="w-28">
+                <label for="max-results" class="block text-sm font-medium mb-1">Max results</label>
+                <input id="max-results" name="maxResults" type="number" min="1" max="100" value="20"
+                       aria-describedby="max-results-error"
+                       class="w-full rounded border border-gray-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600" />
+              </div>
+            </div>
+            <p id="max-results-error" class="field-error hidden -mt-2"></p>
+
+            <!-- Submit (spinner is shown while loading) -->
+            <button id="btn-submit" type="submit"
+                    class="w-full inline-flex justify-center items-center gap-2 rounded bg-green-700 hover:bg-green-800 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-semibold py-2.5">
+              <span id="submit-spinner" class="hidden w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" aria-hidden="true"></span>
+              <span id="submit-label">Find notes</span>
+            </button>
+          </form>
+        </section>
       </section>
 
       <!-- Attribution / disclaimer footer -->
