@@ -29,6 +29,13 @@ let currentLayer = 'Standard'; // name of the active base layer
 let locationMarker = null;     // blue dot for "my location"
 let messageTimer = null;       // timer used to hide the map message
 
+let markerLayer = null;        // group holding all note markers
+const markersById = new Map(); // note id -> Leaflet marker
+let selectedId = null;         // id of the highlighted marker
+
+// Marker colours: red = open, green = closed (like openstreetmap.org)
+const MARKER_COLORS = { open: '#dc2626', closed: '#16a34a' };
+
 /** Create the map inside <div id="map"> and add the default tiles. */
 export function initMap() {
   map = L.map('map', {
@@ -37,6 +44,7 @@ export function initMap() {
     zoomControl: false // we use our own +/- buttons on the right
   });
   layers[currentLayer].addTo(map);
+  markerLayer = L.layerGroup().addTo(map);
   return map;
 }
 
@@ -106,4 +114,58 @@ export function showDummyTooltip(button) {
 
   clearTimeout(tip.hideTimer);
   tip.hideTimer = setTimeout(() => tip.classList.add('hidden'), 1500);
+}
+
+// ---------- Note markers ----------
+
+/** Normal (not highlighted) marker style for a note. */
+function markerStyle(note, selected = false) {
+  return {
+    radius: selected ? 11 : 7,
+    color: selected ? '#111827' : '#ffffff', // outline
+    weight: selected ? 3 : 2,
+    fillColor: MARKER_COLORS[note.status],
+    fillOpacity: 0.9
+  };
+}
+
+/**
+ * Remove old markers and add one marker per note.
+ * onMarkerClick(id) is called when the user clicks a marker.
+ */
+export function showNoteMarkers(notes, onMarkerClick) {
+  markerLayer.clearLayers();
+  markersById.clear();
+  selectedId = null;
+
+  notes.forEach((note) => {
+    const marker = L.circleMarker([note.lat, note.lon], markerStyle(note))
+      .bindTooltip(`${note.type} · ${note.status}`)
+      .on('click', () => onMarkerClick(note.id));
+    marker.note = note; // keep the note so we can restyle the marker later
+    marker.addTo(markerLayer);
+    markersById.set(note.id, marker);
+  });
+}
+
+/**
+ * Highlight one marker (bigger, dark outline) and reset the old one.
+ * If fly is true, the map flies to the marker.
+ */
+export function highlightMarker(id, fly = false) {
+  const old = markersById.get(selectedId);
+  if (old) old.setStyle(markerStyle(old.note));
+
+  const marker = markersById.get(id);
+  if (!marker) return;
+  marker.setStyle(markerStyle(marker.note, true));
+  marker.bringToFront();
+  selectedId = id;
+
+  if (fly) map.flyTo(marker.getLatLng(), Math.max(map.getZoom(), 16));
+}
+
+/** Move the map to show a search bbox ({ minLon, minLat, maxLon, maxLat }). */
+export function fitToBbox(bbox) {
+  map.fitBounds([[bbox.minLat, bbox.minLon], [bbox.maxLat, bbox.maxLon]]);
 }

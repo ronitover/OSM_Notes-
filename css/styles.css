@@ -78,6 +78,37 @@
   border-color: #b91c1c !important;
 }
 
+/* ---------- Note cards and badges ---------- */
+
+/* Age badge colours: gray < 1 year, amber 1-3 years, red 3+ years */
+.age-badge {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.age-new      { background: #e5e7eb; color: #374151; } /* gray */
+.age-old      { background: #fde68a; color: #92400e; } /* amber */
+.age-very-old { background: #dc2626; color: #fff; }    /* red */
+
+/* Status pill: outlined, so it doesn't clash with the filled age badge */
+.status-pill {
+  display: inline-block;
+  padding: 0.0625rem 0.5rem;
+  border: 1px solid;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+}
+.status-open   { border-color: #fca5a5; color: #b91c1c; } /* red, like open markers */
+.status-closed { border-color: #86efac; color: #15803d; } /* green, like closed markers */
+
+/* Selected card (from a card or marker click) */
+.note-card.is-selected {
+  border-color: #15803d;
+  box-shadow: 0 0 0 2px #15803d;
+}
+
 /* Visible green focus ring for keyboard users on all links and buttons */
 a:focus-visible,
 button:focus-visible {

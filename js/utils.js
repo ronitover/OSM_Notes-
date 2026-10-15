@@ -118,3 +118,58 @@ export function detectType(text, types) {
   const match = types.find((t) => t.keywords.some((word) => lower.includes(word)));
   return match ? match.type : 'Other';
 }
+
+// ---------- Filtering and sorting ----------
+
+/**
+ * Apply the user's filters to the fetched notes:
+ * 1. keep only the chosen status ('open' | 'closed' | 'all')
+ * 2. keep only notes older than N days (0 = any age)
+ * 3. sort oldest first
+ * Returns a new array (the original is not changed).
+ */
+export function filterAndSortNotes(notes, { status, olderThanDays }) {
+  return notes
+    .filter((note) => status === 'all' || note.status === status)
+    .filter((note) => note.ageDays >= olderThanDays)
+    .sort((a, b) => a.createdAt - b.createdAt); // smaller date = older = first
+}
+
+// ---------- Display helpers ----------
+
+/** "12 May 2019" */
+export function formatDate(date) {
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+/** Short age text: "5 days", "8 months", "3 years". */
+export function formatAge(days) {
+  if (days < 31) return `${days} day${days === 1 ? '' : 's'}`;
+  if (days < 365) {
+    const months = Math.floor(days / 30.4);
+    return `${months} month${months === 1 ? '' : 's'}`;
+  }
+  const years = Math.floor(days / 365);
+  return `${years} year${years === 1 ? '' : 's'}`;
+}
+
+/** Age group used for the badge colour: under 1 year, 1-3 years, 3+ years. */
+export function ageCategory(days) {
+  if (days < 365) return 'new';
+  if (days < 3 * 365) return 'old';
+  return 'very-old';
+}
+
+/**
+ * Escape text before putting it inside HTML.
+ * Note text is written by anyone on the internet, so this stops
+ * "<script>" or other HTML in a note from running on our page.
+ */
+export function escapeHtml(text) {
+  return String(text)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}

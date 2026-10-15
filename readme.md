@@ -30,9 +30,9 @@ index.html          page layout (navbar, sidebar, map, controls, footer)
 css/styles.css      small custom styles
 js/app.js           entry point: wires events, holds state
 js/api.js           fetch calls (Nominatim, Notes API, local JSON) + normalization
-js/map.js           Leaflet map, tile layers, map controls
-js/ui.js            sidebar rendering: notes panel, form errors
-js/utils.js         helpers: geolocation, validation, dates, bbox, type detection
+js/map.js           Leaflet map, tile layers, map controls, note markers
+js/ui.js            sidebar rendering: notes panel, form errors, cards, detail view
+js/utils.js         helpers: geolocation, validation, dates, bbox, type detection, filtering
 data/noteTypes.json note types and their keywords (used to label notes)
 CONTEXT.md          project brief / scope
 ```
@@ -63,13 +63,22 @@ CONTEXT.md          project brief / scope
   4. Each note is normalized into a simple object: id, lat/lon, status, created date, age in days, report text, comments and URL.
   5. A **type** (Missing road, Wrong name, Closed shop, …) is guessed by keyword matching against `data/noteTypes.json`.
   6. Errors are typed (`not-found`, `too-large`, `network`, `http`), so each one can get its own message.
+- **Results list**:
+  - Notes are filtered by Status and "Older than", sorted **oldest first**, and cut to Max results.
+  - A result count is shown, e.g. "Showing 20 of 103 notes, oldest first."
+  - Each card shows an age badge (gray under 1 year, amber 1–3 years, red 3+ years), the note type, a 2-line preview of the report, the created date and an Open/Closed pill.
+  - Note text is HTML-escaped before it is shown, because it is written by the public.
+- **Map markers**: one per result, red for open and green for closed. The map moves to the searched area.
+  - Clicking a card highlights the card, highlights its marker and flies the map to it.
+  - Clicking a marker highlights its marker and scrolls to its card.
+- **Note detail view** (the **View** button on a card): Back button, note id, age badge, type, status, created date and reporter, the full report, the comment thread, an **Open on OpenStreetMap** link, and **Copy link** (shows "Copied!").
 
 ## JavaScript events used (so far)
 | Event | Where |
 | --- | --- |
 | `submit` | Notes form: validate and search |
 | `input` | Area and Max results: clear the inline error while typing |
-| `click` | Map controls, Notes link, Use my location, Clear location |
+| `click` | Map controls, Notes link, Use my location, Clear location, note cards (event delegation), View, map markers, Back, Copy link |
 
 ## APIs used
 | Purpose | Endpoint |
@@ -87,3 +96,4 @@ All APIs are free and need no key. Nominatim is called only when the form is sub
 - [x] Step 2: Leaflet map with OSM tiles and map controls
 - [x] Step 3: Notes filter form with validation and feedback
 - [x] Step 4: Fetch and normalize notes from the OSM Notes API
+- [x] Step 5: Sorted note list, map markers and detail view

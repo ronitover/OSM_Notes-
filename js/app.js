@@ -3,19 +3,25 @@
   Wires up events and holds the app state.
 */
 
-import { initMap, zoomIn, zoomOut, locateUser, toggleLayer, showDummyTooltip } from './map.js';
-import { validateSearch, bboxAroundPoint } from './utils.js';
+import {
+  initMap, zoomIn, zoomOut, locateUser, toggleLayer, showDummyTooltip,
+  showNoteMarkers, highlightMarker, fitToBbox
+} from './map.js';
+import { validateSearch, bboxAroundPoint, clampBbox, filterAndSortNotes } from './utils.js';
 import { geocodeArea, fetchNotes, loadNoteTypes, normalizeNote } from './api.js';
 import {
   showNotesPanel, getFormValues, showFormErrors, showFieldError, clearFieldError,
-  setLocationStatus, setLocatingButton
+  setLocationStatus, setLocatingButton, renderResults, clearResults, highlightCard,
+  showNoteDetail, flashCopyButton
 } from './ui.js';
 
 // ---------- App state ----------
 const state = {
   location: null, // { lat, lon } once the user shares their location
   noteTypes: [],  // loaded once from data/noteTypes.json
-  notes: []       // normalized notes from the last search
+  notes: [],      // all normalized notes from the last search
+  shown: [],      // notes currently in the list (after filters + max results)
+  openNote: null  // note shown in the detail view
 };
 
 // ---------- Map ----------
@@ -80,6 +86,8 @@ form.addEventListener('submit', async (event) => {
   showFormErrors(errors);
   if (Object.keys(errors).length > 0) return; // stop if anything is invalid
 
+  clearResults(); // remove the previous search's cards
+
   try {
     // 1. Work out the bounding box: typed area wins over shared location
     let bbox;
@@ -99,11 +107,75 @@ form.addEventListener('submit', async (event) => {
     const closedParam = values.status === 'open' ? 0 : -1;
     const features = await fetchNotes(bbox, closedParam);
 
-    // 4. Convert to our simple note objects
+    // 4. Convert to our simple note objects, show them, and move the map there
     state.notes = features.map((feature) => normalizeNote(feature, state.noteTypes));
-    console.log(`Found ${state.notes.length} notes:`, state.notes);
+    fitToBbox(clampBbox(bbox));
+    updateResults(values);
   } catch (error) {
     // Error panels come in Step 6; for now just log the typed error
     console.error(`Search failed [${error.kind || 'unknown'}]:`, error.message);
+  }
+});
+
+// ---------- Results ----------
+
+/**
+ * Filter + sort the stored notes, keep the first "maxResults",
+ * then draw the cards and the map markers.
+ */
+function updateResults(values) {
+  const matching = filterAndSortNotes(state.notes, values);
+  state.shown = matching.slice(0, values.maxResults);
+  renderResults(state.shown, matching.length);
+  showNoteMarkers(state.shown, selectNoteFromMarker);
+}
+
+/** Find a shown note by id. */
+function findNote(id) {
+  return state.shown.find((note) => note.id === id);
+}
+
+/** Marker click: make sure the list is visible, highlight the card and marker. */
+function selectNoteFromMarker(id) {
+  showNotesPanel(false);
+  highlightCard(id);
+  highlightMarker(id);
+}
+
+// Card clicks (one listener on the list = "event delegation")
+document.getElementById('results-list').addEventListener('click', (event) => {
+  const card = event.target.closest('.note-card');
+  if (!card) return;
+  const note = findNote(Number(card.dataset.id));
+
+  highlightCard(note.id);
+  highlightMarker(note.id, true); // fly to the marker
+
+  // The "View" button inside the card opens the detail view
+  if (event.target.closest('.btn-view')) {
+    state.openNote = note;
+    showNoteDetail(note);
+  }
+});
+
+// ---------- Detail view ----------
+
+// The detail view's HTML is rebuilt for every note, so listen on its container
+document.getElementById('detail-view').addEventListener('click', async (event) => {
+  // Back button: return to the list with the same card highlighted
+  if (event.target.closest('#btn-back')) {
+    showNotesPanel(false);
+    const card = highlightCard(state.openNote.id);
+    if (card) card.focus();
+  }
+
+  // Copy link button: copy the note URL to the clipboard
+  if (event.target.closest('#btn-copy-link')) {
+    try {
+      await navigator.clipboard.writeText(state.openNote.url);
+      flashCopyButton('Copied!');
+    } catch {
+      flashCopyButton('Copy failed');
+    }
   }
 });

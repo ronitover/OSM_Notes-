@@ -146,7 +146,17 @@
               <span id="submit-label">Find notes</span>
             </button>
           </form>
+
+          <!-- Results: count + list of note cards (filled by ui.js).
+               aria-live lets screen readers announce the new result count. -->
+          <section id="results" class="mt-4" aria-live="polite" aria-label="Search results">
+            <p id="result-count" class="text-sm text-gray-600 mb-2"></p>
+            <ul id="results-list" class="space-y-2"></ul>
+          </section>
         </section>
+
+        <!-- ===== Note detail view (filled by ui.js, hidden until a note is opened) ===== -->
+        <section id="detail-view" class="hidden" aria-label="Note details"></section>
       </section>
 
       <!-- Attribution / disclaimer footer -->
