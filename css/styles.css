@@ -109,9 +109,32 @@
   box-shadow: 0 0 0 2px #15803d;
 }
 
-/* Visible green focus ring for keyboard users on all links and buttons */
+/* ---------- Mobile ---------- */
+
+/* Links in the mobile dropdown menu */
+.mobile-link {
+  display: block;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  color: #374151;
+}
+.mobile-link:hover {
+  background-color: #f3f4f6;
+}
+
+/* Folded bottom sheet (mobile only): hide the panel content, keep handle + footer */
+@media (max-width: 767px) {
+  #sidebar.sheet-collapsed #sidebar-content {
+    display: none;
+  }
+}
+
+/* ---------- Accessibility ---------- */
+
+/* Visible green focus ring for keyboard users on links, buttons and cards */
 a:focus-visible,
-button:focus-visible {
+button:focus-visible,
+.note-card:focus-visible {
   outline: 2px solid #15803d; /* green-700 */
   outline-offset: 2px;
 }

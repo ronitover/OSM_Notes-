@@ -81,6 +81,19 @@ CONTEXT.md          project brief / scope
   - Server problem (other HTTP errors)
 - **Live re-filtering**: changing Status or "Older than" after a search re-filters the stored notes with **no new request**. The one exception is switching from Open to Closed/All when only open notes were fetched: then it refetches with `closed=-1`.
 - **Search this area**: after you pan or zoom to a different area (`moveend`), a button appears at the top of the map that searches the visible area. It does not appear after the app's own map moves (fitting results, flying to a card).
+- **Responsive layout**:
+  - **Desktop (md, 768 px and up):** a 360 px sidebar next to the map.
+  - **Mobile (below 768 px):** the sidebar becomes a **bottom sheet** over a full-screen map. It is at most 60% of the screen height, has a rounded top and scrolls. Tapping the handle folds it down to show more map, and it opens again on a new search or a marker tap.
+  - Map controls on mobile are reduced to zoom, locate and layers.
+  - Below 1024 px, the navbar links collapse into a **menu button** that toggles a dropdown (Escape closes it). The full link set is too wide to fit between 768 and 1024 px, so the menu stays until 1024 px.
+- **Accessibility**:
+  - Every input has a `<label>`, and the status chips sit in a `<fieldset>` with a `<legend>`.
+  - Icon-only buttons have `aria-label`s.
+  - The menu button and sheet handle use `aria-expanded`.
+  - The results area is `aria-live="polite"` (and `aria-busy` while loading); map messages use `role="status"`; error panels use `role="alert"`.
+  - Links, buttons, chips and cards get a green focus ring.
+  - Cards can be reached with Tab and selected with **Enter** or **Space**.
+  - Opening a note moves focus to "Back", and Back returns focus to the card.
 - **Note detail view** (the **View** button on a card): Back button, note id, age badge, type, status, created date and reporter, the full report, the comment thread, an **Open on OpenStreetMap** link, and **Copy link** (shows "Copied!").
 
 ## JavaScript events used (so far)
@@ -90,7 +103,8 @@ CONTEXT.md          project brief / scope
 | `input` | Area and Max results: clear the inline error while typing |
 | `change` | Status chips and Older than: re-filter results without refetching |
 | `moveend` (Leaflet) | Map: show the "Search this area" button |
-| `click` | Map controls, Notes link, Use my location, Clear location, note cards (event delegation), View, map markers, Back, Copy link, Retry, Widen search, Search this area |
+| `keydown` | Enter/Space on note cards, Escape closes the mobile menu |
+| `click` | Map controls, Notes link, Use my location, Clear location, note cards (event delegation), View, map markers, Back, Copy link, Retry, Widen search, Search this area, menu button, sheet handle |
 
 ## APIs used
 | Purpose | Endpoint |
@@ -110,3 +124,4 @@ All APIs are free and need no key. Nominatim is called only when the form is sub
 - [x] Step 4: Fetch and normalize notes from the OSM Notes API
 - [x] Step 5: Sorted note list, map markers and detail view
 - [x] Step 6: Loading, empty and error states with live re-filtering
+- [x] Step 7: Responsive layout (mobile bottom sheet) and accessibility

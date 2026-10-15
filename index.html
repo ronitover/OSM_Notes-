@@ -17,11 +17,12 @@
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 
-<!-- Full-height page: navbar on top, sidebar + map fill the rest -->
-<body class="h-screen flex flex-col bg-white text-gray-900 overflow-hidden">
+<!-- Full-height page: navbar on top, sidebar + map fill the rest.
+     h-dvh = full "dynamic" viewport height, so mobile browser bars don't cut it off -->
+<body class="h-dvh flex flex-col bg-white text-gray-900 overflow-hidden">
 
   <!-- ================= NAVBAR ================= -->
-  <header class="h-14 shrink-0 flex items-center justify-between px-3 bg-white border-b border-gray-300 z-[1000]">
+  <header class="relative h-14 shrink-0 flex items-center justify-between px-3 bg-white border-b border-gray-300 z-[1000]">
 
     <!-- Left side: logo + main links -->
     <nav class="flex items-center gap-1" aria-label="Main navigation">
@@ -35,16 +36,18 @@
         <span class="font-semibold text-lg">OSM Notes+</span>
       </a>
 
-      <!-- Dummy links that copy the OSM navbar -->
-      <a href="#" class="nav-link">Edit ▾</a>
-      <a href="#" class="nav-link">History</a>
-      <a href="#" class="nav-link">Export</a>
+      <!-- Dummy links that copy the OSM navbar (moved into the menu on small screens) -->
+      <div class="hidden lg:flex items-center gap-1">
+        <a href="#" class="nav-link">Edit ▾</a>
+        <a href="#" class="nav-link">History</a>
+        <a href="#" class="nav-link">Export</a>
+      </div>
       <!-- Highlighted link: the feature this project adds -->
       <a href="#" id="nav-notes" aria-current="page" class="px-3 py-1.5 rounded text-sm font-semibold text-white bg-green-700 hover:bg-green-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-1">Notes</a>
     </nav>
 
-    <!-- Right side: secondary dummy links -->
-    <nav class="flex items-center gap-1" aria-label="Community and account">
+    <!-- Right side: secondary dummy links (hidden on small screens) -->
+    <nav class="hidden lg:flex items-center gap-1" aria-label="Community and account">
       <a href="#" class="nav-link">GPS Traces</a>
       <a href="#" class="nav-link">User Diaries</a>
       <a href="#" class="nav-link">Communities</a>
@@ -53,16 +56,50 @@
       <a href="#" class="ml-2 px-3 py-1.5 rounded text-sm border border-gray-300 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500">Log In</a>
       <a href="#" class="px-3 py-1.5 rounded text-sm border border-gray-300 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500">Sign Up</a>
     </nav>
+
+    <!-- Menu button (small screens only): toggles the dropdown below -->
+    <button id="btn-menu" type="button" class="lg:hidden p-2 rounded hover:bg-gray-100"
+            aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu">
+      <svg viewBox="0 0 20 20" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14" /></svg>
+    </button>
+
+    <!-- Dropdown menu with all the navbar links (small screens only) -->
+    <nav id="mobile-menu" class="hidden lg:hidden absolute top-full right-2 mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg py-2 flex-col" aria-label="Menu">
+      <a href="#" class="mobile-link">Edit</a>
+      <a href="#" class="mobile-link">History</a>
+      <a href="#" class="mobile-link">Export</a>
+      <hr class="my-1 border-gray-200" />
+      <a href="#" class="mobile-link">GPS Traces</a>
+      <a href="#" class="mobile-link">User Diaries</a>
+      <a href="#" class="mobile-link">Communities</a>
+      <a href="#" class="mobile-link">Help</a>
+      <a href="#" class="mobile-link">About</a>
+      <hr class="my-1 border-gray-200" />
+      <a href="#" class="mobile-link">Log In</a>
+      <a href="#" class="mobile-link">Sign Up</a>
+    </nav>
   </header>
 
   <!-- ================= MAIN AREA ================= -->
-  <div class="flex flex-1 min-h-0">
+  <!-- "relative" so the mobile bottom sheet can be positioned over the map -->
+  <div class="relative flex flex-1 min-h-0">
 
-    <!-- ----- Left sidebar (360px) ----- -->
-    <aside id="sidebar" class="w-[360px] shrink-0 flex flex-col bg-gray-100 border-r border-gray-300 z-[500]" aria-label="Sidebar">
+    <!-- ----- Sidebar -----
+         Mobile (below md): bottom sheet over the map, max 60% of the screen, rounded top.
+         Desktop (md and up): normal 360px column on the left. -->
+    <aside id="sidebar"
+           class="absolute inset-x-0 bottom-0 max-h-[60vh] rounded-t-2xl shadow-[0_-4px_16px_rgba(0,0,0,0.15)]
+                  md:static md:max-h-none md:w-[360px] md:rounded-none md:shadow-none md:border-r md:border-gray-300
+                  shrink-0 flex flex-col bg-gray-100 z-[500]" aria-label="Sidebar">
+
+      <!-- Drag handle look (mobile only); tapping it folds the sheet down / up -->
+      <button id="btn-sheet-handle" type="button" class="md:hidden flex justify-center pt-2 pb-1 shrink-0"
+              aria-label="Hide notes panel" aria-expanded="true" aria-controls="sidebar-content">
+        <span class="block w-10 h-1.5 rounded-full bg-gray-400"></span>
+      </button>
 
       <!-- Scrollable panel content -->
-      <section id="sidebar-content" class="flex-1 overflow-y-auto p-4">
+      <section id="sidebar-content" class="flex-1 min-h-0 overflow-y-auto p-4">
 
         <!-- ===== Notes panel: search form (+ results in later steps) ===== -->
         <section id="notes-panel" aria-labelledby="notes-title">
@@ -169,7 +206,8 @@
     </aside>
 
     <!-- ----- Map area ----- -->
-    <main class="relative flex-1">
+    <!-- "isolate" keeps Leaflet's own z-indexes inside the map, so the bottom sheet stays on top -->
+    <main class="relative flex-1 isolate">
       <!-- Leaflet draws the map inside this div (Step 2) -->
       <div id="map" class="absolute inset-0 bg-gray-200" aria-label="Map"></div>
 
@@ -181,7 +219,7 @@
       </button>
 
       <!-- Short status messages shown over the map (location, layer change) -->
-      <div id="map-message" class="hidden absolute bottom-8 left-1/2 -translate-x-1/2 z-[450] max-w-xs px-3 py-2 rounded bg-gray-900/85 text-white text-sm text-center shadow" role="status" aria-live="polite"></div>
+      <div id="map-message" class="hidden absolute top-16 left-1/2 -translate-x-1/2 z-[450] max-w-xs px-3 py-2 rounded bg-gray-900/85 text-white text-sm text-center shadow" role="status" aria-live="polite"></div>
 
       <!-- Right-side map control stack (buttons only for now) -->
       <div class="absolute top-3 right-3 z-[400] flex flex-col gap-2" role="toolbar" aria-label="Map controls">
@@ -206,25 +244,28 @@
           <svg viewBox="0 0 20 20" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M10 3l8 4-8 4-8-4z" /><path d="M2 11l8 4 8-4" /></svg>
         </button>
 
-        <!-- Legend (not part of prototype) -->
-        <button id="btn-legend" class="map-btn map-btn-single" data-dummy aria-label="Map legend" title="Legend">
-          <svg viewBox="0 0 20 20" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 5h10M7 10h10M7 15h10" /><circle cx="3.5" cy="5" r="1" fill="currentColor" /><circle cx="3.5" cy="10" r="1" fill="currentColor" /><circle cx="3.5" cy="15" r="1" fill="currentColor" /></svg>
-        </button>
+        <!-- Look-only controls: hidden on small screens to save space -->
+        <div class="hidden md:flex flex-col gap-2">
+          <!-- Legend (not part of prototype) -->
+          <button id="btn-legend" class="map-btn map-btn-single" data-dummy aria-label="Map legend" title="Legend">
+            <svg viewBox="0 0 20 20" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 5h10M7 10h10M7 15h10" /><circle cx="3.5" cy="5" r="1" fill="currentColor" /><circle cx="3.5" cy="10" r="1" fill="currentColor" /><circle cx="3.5" cy="15" r="1" fill="currentColor" /></svg>
+          </button>
 
-        <!-- Share (not part of prototype) -->
-        <button id="btn-share" class="map-btn map-btn-single" data-dummy aria-label="Share" title="Share">
-          <svg viewBox="0 0 20 20" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="15" cy="4.5" r="2" /><circle cx="5" cy="10" r="2" /><circle cx="15" cy="15.5" r="2" /><path d="M7 9l6-3.5M7 11l6 3.5" /></svg>
-        </button>
+          <!-- Share (not part of prototype) -->
+          <button id="btn-share" class="map-btn map-btn-single" data-dummy aria-label="Share" title="Share">
+            <svg viewBox="0 0 20 20" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="15" cy="4.5" r="2" /><circle cx="5" cy="10" r="2" /><circle cx="15" cy="15.5" r="2" /><path d="M7 9l6-3.5M7 11l6 3.5" /></svg>
+          </button>
 
-        <!-- Add a note (not part of prototype) -->
-        <button id="btn-add-note" class="map-btn map-btn-single" data-dummy aria-label="Add a note to the map" title="Add a note">
-          <svg viewBox="0 0 20 20" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 3h14v10H9l-4 4v-4H3z" /><path d="M10 6v4M8 8h4" /></svg>
-        </button>
+          <!-- Add a note (not part of prototype) -->
+          <button id="btn-add-note" class="map-btn map-btn-single" data-dummy aria-label="Add a note to the map" title="Add a note">
+            <svg viewBox="0 0 20 20" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 3h14v10H9l-4 4v-4H3z" /><path d="M10 6v4M8 8h4" /></svg>
+          </button>
 
-        <!-- Query features (not part of prototype) -->
-        <button id="btn-query" class="map-btn map-btn-single" data-dummy aria-label="Query features" title="Query features">
-          <svg viewBox="0 0 20 20" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 2l11 8-5 1-2 5z" /></svg>
-        </button>
+          <!-- Query features (not part of prototype) -->
+          <button id="btn-query" class="map-btn map-btn-single" data-dummy aria-label="Query features" title="Query features">
+            <svg viewBox="0 0 20 20" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 2l11 8-5 1-2 5z" /></svg>
+          </button>
+        </div>
 
         <!-- Tooltip for the buttons above that are only for looks -->
         <div id="control-tooltip" class="hidden absolute right-full mr-2 -translate-y-1/2 whitespace-nowrap px-2 py-1 rounded bg-gray-900 text-white text-xs shadow" role="status">

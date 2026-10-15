@@ -15,7 +15,7 @@ import {
   showNotesPanel, getFormValues, showFormErrors, clearFieldError,
   setLocationStatus, setLocatingButton, renderResults, highlightCard,
   showNoteDetail, flashCopyButton, setLoading, renderEmptyState, renderError,
-  setSearchAreaButton
+  setSearchAreaButton, setMenuOpen, setSheetCollapsed
 } from './ui.js';
 
 // ---------- App state ----------
@@ -48,13 +48,35 @@ document.querySelectorAll('[data-dummy]').forEach((button) => {
   button.addEventListener('click', () => showDummyTooltip(button));
 });
 
+// ---------- Mobile menu and bottom sheet ----------
+const menuButton = document.getElementById('btn-menu');
+
+// Menu button (click): open / close the dropdown
+menuButton.addEventListener('click', () => {
+  setMenuOpen(menuButton.getAttribute('aria-expanded') !== 'true');
+});
+
+// Escape key (keydown): close the menu and return focus to its button
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && menuButton.getAttribute('aria-expanded') === 'true') {
+    setMenuOpen(false);
+    menuButton.focus();
+  }
+});
+
+// Sheet handle (click): fold the bottom sheet down to see more map, or back up
+document.getElementById('btn-sheet-handle').addEventListener('click', () => {
+  setSheetCollapsed(!document.getElementById('sidebar').classList.contains('sheet-collapsed'));
+});
+
 // ---------- Notes panel ----------
 const form = document.getElementById('notes-form');
 
 // Show the panel on page load and whenever the Notes link is clicked
-showNotesPanel();
+showNotesPanel(window.innerWidth >= 768); // don't pop up the phone keyboard on load
 document.getElementById('nav-notes').addEventListener('click', (event) => {
   event.preventDefault(); // stop the "#" link jumping the page
+  setSheetCollapsed(false);
   showNotesPanel();
 });
 
@@ -110,6 +132,7 @@ form.addEventListener('submit', (event) => {
 async function search(values, bbox = null) {
   state.loading = true;
   setLoading(true);
+  setSheetCollapsed(false); // make sure the results are visible on mobile
   setSearchAreaButton(false);
 
   try {
@@ -206,6 +229,7 @@ function findNote(id) {
 
 /** Marker click: make sure the list is visible, highlight the card and marker. */
 function selectNoteFromMarker(id) {
+  setSheetCollapsed(false);
   showNotesPanel(false);
   highlightCard(id);
   highlightMarker(id);
@@ -224,6 +248,15 @@ document.getElementById('results-list').addEventListener('click', (event) => {
   if (event.target.closest('.btn-view')) {
     state.openNote = note;
     showNoteDetail(note);
+  }
+});
+
+// Keyboard (keydown): Enter or Space on a focused card works like a click
+document.getElementById('results-list').addEventListener('keydown', (event) => {
+  const isCard = event.target.classList.contains('note-card');
+  if (isCard && (event.key === 'Enter' || event.key === ' ')) {
+    event.preventDefault(); // stop Space from scrolling the list
+    event.target.click();
   }
 });
 

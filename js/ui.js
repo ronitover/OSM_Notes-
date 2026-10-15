@@ -303,3 +303,23 @@ export function setSearchAreaButton(visible) {
   button.classList.toggle('hidden', !visible);
   button.classList.toggle('inline-flex', visible);
 }
+
+// ---------- Mobile: menu and bottom sheet ----------
+
+/** Open or close the mobile dropdown menu. */
+export function setMenuOpen(isOpen) {
+  const menu = document.getElementById('mobile-menu');
+  const button = document.getElementById('btn-menu');
+  menu.classList.toggle('hidden', !isOpen);
+  menu.classList.toggle('flex', isOpen);
+  button.setAttribute('aria-expanded', String(isOpen));
+  button.setAttribute('aria-label', isOpen ? 'Close menu' : 'Open menu');
+}
+
+/** Fold the mobile bottom sheet down (only the handle shows) or back up. */
+export function setSheetCollapsed(isCollapsed) {
+  const handle = document.getElementById('btn-sheet-handle');
+  document.getElementById('sidebar').classList.toggle('sheet-collapsed', isCollapsed);
+  handle.setAttribute('aria-expanded', String(!isCollapsed));
+  handle.setAttribute('aria-label', isCollapsed ? 'Show notes panel' : 'Hide notes panel');
+}
