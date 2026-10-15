@@ -105,10 +105,9 @@ function statusPillHtml(note) {
 export function renderResults(shown, matching) {
   const count = document.getElementById('result-count');
   const list = document.getElementById('results-list');
+  document.getElementById('results-state').innerHTML = '';
 
-  count.textContent = matching === 0
-    ? 'No notes match these filters.'
-    : `Showing ${shown.length} of ${matching} note${matching === 1 ? '' : 's'}, oldest first.`;
+  count.textContent = `Showing ${shown.length} of ${matching} note${matching === 1 ? '' : 's'}, oldest first.`;
 
   // Build all cards as one HTML string. Note text is escaped (it comes from users).
   list.innerHTML = shown.map((note) => `
@@ -132,6 +131,7 @@ export function renderResults(shown, matching) {
 /** Clear the count and list (e.g. when a new search starts). */
 export function clearResults() {
   document.getElementById('result-count').textContent = '';
+  document.getElementById('results-state').innerHTML = '';
   document.getElementById('results-list').innerHTML = '';
 }
 
@@ -217,4 +217,89 @@ export function flashCopyButton(text) {
   if (!button) return;
   button.textContent = text;
   setTimeout(() => { button.textContent = 'Copy link'; }, 2000);
+}
+
+// ---------- Loading, empty and error states ----------
+
+/**
+ * Loading on/off: disable the whole form, show the spinner in the submit
+ * button and (when starting) show grey "skeleton" cards as placeholders.
+ */
+export function setLoading(isLoading) {
+  const form = document.getElementById('notes-form');
+  form.querySelectorAll('input, select, button').forEach((el) => { el.disabled = isLoading; });
+
+  document.getElementById('submit-spinner').classList.toggle('hidden', !isLoading);
+  document.getElementById('submit-label').textContent = isLoading ? 'Searching…' : 'Find notes';
+  document.getElementById('results').setAttribute('aria-busy', String(isLoading));
+
+  if (isLoading) {
+    clearResults();
+    document.getElementById('result-count').textContent = 'Searching for notes…';
+    // Three pulsing placeholder cards
+    const skeleton = `
+      <li class="bg-white rounded-lg border border-gray-200 p-3 animate-pulse" aria-hidden="true">
+        <div class="flex gap-2 mb-2"><div class="h-4 w-16 bg-gray-200 rounded-full"></div><div class="h-4 w-20 bg-gray-200 rounded"></div></div>
+        <div class="h-3 bg-gray-200 rounded mb-1.5"></div>
+        <div class="h-3 w-2/3 bg-gray-200 rounded mb-2"></div>
+        <div class="h-3 w-24 bg-gray-200 rounded"></div>
+      </li>`;
+    document.getElementById('results-list').innerHTML = skeleton.repeat(3);
+  }
+}
+
+// Text for the "Older than" values, used in the empty state message
+const AGE_TEXT = { 182: '6 months', 365: '1 year', 1095: '3 years' };
+
+/**
+ * Empty state: nothing matched. Shows a "Widen search" button
+ * (or a hint if the area is already as big as we can search).
+ */
+export function renderEmptyState(values, canWiden) {
+  const statusWord = values.status === 'all' ? '' : `${values.status} `;
+  const ageWords = values.olderThanDays ? ` older than ${AGE_TEXT[values.olderThanDays]}` : '';
+
+  clearResults();
+  document.getElementById('results-state').innerHTML = `
+    <div class="bg-white rounded-lg border border-gray-200 p-4 text-center">
+      <p class="text-sm font-medium mb-1">No ${statusWord}notes${ageWords} here</p>
+      <p class="text-sm text-gray-600 mb-3">
+        ${canWiden ? 'Try a larger area or change the filters.' : 'This is the largest area we can search. Try changing the filters.'}
+      </p>
+      ${canWiden ? `<button id="btn-widen" type="button"
+              class="rounded bg-green-700 hover:bg-green-800 text-white text-sm font-semibold px-4 py-2">Widen search</button>` : ''}
+    </div>`;
+}
+
+// Title for each kind of error (kinds come from ApiError and getUserPosition)
+const ERROR_TITLES = {
+  'not-found': 'Area not found',
+  'too-large': 'Area too large',
+  network: 'No connection',
+  http: 'Server problem',
+  denied: 'Location blocked',
+  unavailable: 'Location unavailable',
+  unsupported: 'Location not supported'
+};
+
+/** Error panel with a title, the friendly message and a Retry button. */
+export function renderError(error) {
+  const title = ERROR_TITLES[error.kind || error.code] || 'Something went wrong';
+  const message = error.kind || error.code ? error.message : 'Please try again.';
+
+  clearResults();
+  document.getElementById('results-state').innerHTML = `
+    <div class="bg-red-50 rounded-lg border border-red-200 p-4" role="alert">
+      <p class="text-sm font-semibold text-red-800 mb-1">${escapeHtml(title)}</p>
+      <p class="text-sm text-red-700 mb-3">${escapeHtml(message)}</p>
+      <button id="btn-retry" type="button"
+              class="rounded border border-red-300 bg-white hover:bg-red-100 text-red-800 text-sm font-semibold px-4 py-2">Retry</button>
+    </div>`;
+}
+
+/** Show or hide the "Search this area" button over the map. */
+export function setSearchAreaButton(visible) {
+  const button = document.getElementById('btn-search-area');
+  button.classList.toggle('hidden', !visible);
+  button.classList.toggle('inline-flex', visible);
 }

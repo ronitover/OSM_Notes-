@@ -5,23 +5,30 @@
 
 import {
   initMap, zoomIn, zoomOut, locateUser, toggleLayer, showDummyTooltip,
-  showNoteMarkers, highlightMarker, fitToBbox
+  showNoteMarkers, highlightMarker, fitToBbox, onMapMoved, getMapBbox, viewDiffersFrom
 } from './map.js';
-import { validateSearch, bboxAroundPoint, clampBbox, filterAndSortNotes } from './utils.js';
+import {
+  validateSearch, bboxAroundPoint, clampBbox, widenBbox, isMaxBbox, filterAndSortNotes
+} from './utils.js';
 import { geocodeArea, fetchNotes, loadNoteTypes, normalizeNote } from './api.js';
 import {
-  showNotesPanel, getFormValues, showFormErrors, showFieldError, clearFieldError,
-  setLocationStatus, setLocatingButton, renderResults, clearResults, highlightCard,
-  showNoteDetail, flashCopyButton
+  showNotesPanel, getFormValues, showFormErrors, clearFieldError,
+  setLocationStatus, setLocatingButton, renderResults, highlightCard,
+  showNoteDetail, flashCopyButton, setLoading, renderEmptyState, renderError,
+  setSearchAreaButton
 } from './ui.js';
 
 // ---------- App state ----------
 const state = {
-  location: null, // { lat, lon } once the user shares their location
-  noteTypes: [],  // loaded once from data/noteTypes.json
-  notes: [],      // all normalized notes from the last search
-  shown: [],      // notes currently in the list (after filters + max results)
-  openNote: null  // note shown in the detail view
+  location: null,     // { lat, lon } once the user shares their location
+  noteTypes: [],      // loaded once from data/noteTypes.json
+  notes: [],          // all normalized notes from the last search
+  shown: [],          // notes currently in the list (after filters + max results)
+  openNote: null,     // note shown in the detail view
+  bbox: null,         // area of the last successful search
+  fetchedClosed: 0,   // closed param of the last fetch: 0 = open only, -1 = open + closed
+  loading: false,     // true while a search is running
+  retry: null         // function the Retry button runs (repeats the failed action)
 };
 
 // ---------- Map ----------
@@ -51,21 +58,24 @@ document.getElementById('nav-notes').addEventListener('click', (event) => {
   showNotesPanel();
 });
 
-// "Use my location" (click): share location, which counts as a valid area
-document.getElementById('btn-use-location').addEventListener('click', async () => {
+/** "Use my location": share location, which counts as a valid area. */
+async function useMyLocation() {
   setLocatingButton(true);
   try {
     state.location = await locateUser();
     setLocationStatus(state.location);
     clearFieldError('area');
   } catch (error) {
+    // Show the error panel; Retry asks for the location again
     state.location = null;
     setLocationStatus(null);
-    showFieldError('area', error.message);
+    state.retry = useMyLocation;
+    renderError(error);
   } finally {
     setLocatingButton(false);
   }
-});
+}
+document.getElementById('btn-use-location').addEventListener('click', useMyLocation);
 
 // "Clear" next to the location line (click): stop using the location
 document.getElementById('btn-clear-location').addEventListener('click', () => {
@@ -77,8 +87,8 @@ document.getElementById('btn-clear-location').addEventListener('click', () => {
 document.getElementById('area').addEventListener('input', () => clearFieldError('area'));
 document.getElementById('max-results').addEventListener('input', () => clearFieldError('maxResults'));
 
-// Form submit: validate, then find the area and fetch its notes
-form.addEventListener('submit', async (event) => {
+// Form submit: validate, then search
+form.addEventListener('submit', (event) => {
   event.preventDefault(); // stay on the page, we handle the search in JS
 
   const values = getFormValues(form);
@@ -86,17 +96,33 @@ form.addEventListener('submit', async (event) => {
   showFormErrors(errors);
   if (Object.keys(errors).length > 0) return; // stop if anything is invalid
 
-  clearResults(); // remove the previous search's cards
+  search(values); // no bbox yet: it is worked out from the area or location
+});
+
+// ---------- Search ----------
+
+/**
+ * The one search pipeline, used by submit, Retry, Widen search,
+ * re-filtering and "Search this area".
+ * values: form values. bbox: area to search, or null to work it out
+ * from the typed area (Nominatim) or the shared location.
+ */
+async function search(values, bbox = null) {
+  state.loading = true;
+  setLoading(true);
+  setSearchAreaButton(false);
 
   try {
-    // 1. Work out the bounding box: typed area wins over shared location
-    let bbox;
-    if (values.area) {
-      const place = await geocodeArea(values.area);
-      bbox = place.bbox;
-    } else {
-      bbox = bboxAroundPoint(state.location.lat, state.location.lon);
+    // 1. Work out the bounding box if we don't have one: typed area wins over location
+    if (!bbox) {
+      if (values.area) {
+        const place = await geocodeArea(values.area);
+        bbox = place.bbox;
+      } else {
+        bbox = bboxAroundPoint(state.location.lat, state.location.lon);
+      }
     }
+    bbox = clampBbox(bbox); // keep it within the Notes API size limit
 
     // 2. Load note types once (local JSON file)
     if (state.noteTypes.length === 0) {
@@ -107,28 +133,71 @@ form.addEventListener('submit', async (event) => {
     const closedParam = values.status === 'open' ? 0 : -1;
     const features = await fetchNotes(bbox, closedParam);
 
-    // 4. Convert to our simple note objects, show them, and move the map there
+    // 4. Save the results, move the map there and show them
     state.notes = features.map((feature) => normalizeNote(feature, state.noteTypes));
-    fitToBbox(clampBbox(bbox));
+    state.bbox = bbox;
+    state.fetchedClosed = closedParam;
+    fitToBbox(bbox);
+    setLoading(false);
     updateResults(values);
   } catch (error) {
-    // Error panels come in Step 6; for now just log the typed error
-    console.error(`Search failed [${error.kind || 'unknown'}]:`, error.message);
+    // Forget old results, show the right error panel; Retry repeats this exact search
+    setLoading(false);
+    state.notes = [];
+    state.bbox = null;
+    showNoteMarkers([], selectNoteFromMarker);
+    state.retry = () => search(values, bbox);
+    renderError(error);
+  } finally {
+    state.loading = false;
   }
-});
+}
 
 // ---------- Results ----------
 
 /**
  * Filter + sort the stored notes, keep the first "maxResults",
- * then draw the cards and the map markers.
+ * then draw the cards and the map markers (or the empty state).
  */
 function updateResults(values) {
   const matching = filterAndSortNotes(state.notes, values);
   state.shown = matching.slice(0, values.maxResults);
-  renderResults(state.shown, matching.length);
   showNoteMarkers(state.shown, selectNoteFromMarker);
+
+  if (matching.length === 0) {
+    renderEmptyState(values, !isMaxBbox(state.bbox));
+  } else {
+    renderResults(state.shown, matching.length);
+  }
 }
+
+// Re-filtering (change): Status or "Older than" changed after a search
+form.addEventListener('change', (event) => {
+  if (!['status', 'olderThan'].includes(event.target.name)) return;
+  if (!state.bbox || state.loading) return; // no search yet, or one is running
+
+  const values = getFormValues(form);
+  const errors = validateSearch({ ...values, area: 'ok' }, true); // only check max results here
+  showFormErrors(errors);
+  if (Object.keys(errors).length > 0) return;
+
+  // We only fetched open notes, but now closed ones are needed: fetch again
+  if (values.status !== 'open' && state.fetchedClosed === 0) {
+    search(values, state.bbox);
+  } else {
+    updateResults(values); // no network request, just filter the stored notes
+  }
+});
+
+// Retry and Widen search buttons live inside the state panel (rebuilt each time)
+document.getElementById('results-state').addEventListener('click', (event) => {
+  if (event.target.closest('#btn-retry') && state.retry) {
+    state.retry();
+  }
+  if (event.target.closest('#btn-widen')) {
+    search(getFormValues(form), widenBbox(state.bbox)); // twice as big, within the limit
+  }
+});
 
 /** Find a shown note by id. */
 function findNote(id) {
@@ -156,6 +225,24 @@ document.getElementById('results-list').addEventListener('click', (event) => {
     state.openNote = note;
     showNoteDetail(note);
   }
+});
+
+// ---------- Search this area ----------
+
+// moveend: show the button when the map shows a different area than the last search
+onMapMoved(() => {
+  if (state.loading) return;
+  setSearchAreaButton(viewDiffersFrom(state.bbox));
+});
+
+// Search the area currently visible on the map (typed area is ignored)
+document.getElementById('btn-search-area').addEventListener('click', () => {
+  const values = { ...getFormValues(form), area: '' };
+  const errors = validateSearch(values, true); // the map area counts as a valid area
+  showFormErrors(errors);
+  if (Object.keys(errors).length > 0) return;
+
+  search(values, getMapBbox());
 });
 
 // ---------- Detail view ----------

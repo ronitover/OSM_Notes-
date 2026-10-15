@@ -169,3 +169,31 @@ export function highlightMarker(id, fly = false) {
 export function fitToBbox(bbox) {
   map.fitBounds([[bbox.minLat, bbox.minLon], [bbox.maxLat, bbox.maxLon]]);
 }
+
+// ---------- "Search this area" ----------
+
+/** Run a callback every time the map stops moving (pan or zoom). */
+export function onMapMoved(callback) {
+  map.on('moveend', callback);
+}
+
+/** The area currently visible on the map, as a bbox. */
+export function getMapBbox() {
+  const b = map.getBounds();
+  return { minLon: b.getWest(), minLat: b.getSouth(), maxLon: b.getEast(), maxLat: b.getNorth() };
+}
+
+/**
+ * Does the map now show a clearly different area than the last search?
+ * "moveend" also fires after our own moves (fit to results, fly to a card),
+ * so we only count it as a new area if the centre left the searched box,
+ * or the user zoomed out further than the zoom that fits the searched box.
+ */
+export function viewDiffersFrom(bbox) {
+  if (!bbox) return true; // no search yet: any area is new
+
+  const searched = L.latLngBounds([bbox.minLat, bbox.minLon], [bbox.maxLat, bbox.maxLon]);
+  const centerOutside = !searched.contains(map.getCenter());
+  const zoomedOut = map.getZoom() < map.getBoundsZoom(searched);
+  return centerOutside || zoomedOut;
+}

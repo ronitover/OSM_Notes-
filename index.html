@@ -151,6 +151,8 @@
                aria-live lets screen readers announce the new result count. -->
           <section id="results" class="mt-4" aria-live="polite" aria-label="Search results">
             <p id="result-count" class="text-sm text-gray-600 mb-2"></p>
+            <!-- Empty state or error panel (filled by ui.js) -->
+            <div id="results-state"></div>
             <ul id="results-list" class="space-y-2"></ul>
           </section>
         </section>
@@ -171,8 +173,15 @@
       <!-- Leaflet draws the map inside this div (Step 2) -->
       <div id="map" class="absolute inset-0 bg-gray-200" aria-label="Map"></div>
 
+      <!-- "Search this area" appears after the user pans or zooms the map -->
+      <button id="btn-search-area" type="button"
+              class="hidden absolute top-3 left-1/2 -translate-x-1/2 z-[450] items-center gap-2 px-4 py-2 rounded-full bg-white border border-gray-300 shadow text-sm font-semibold text-green-700 hover:bg-gray-50">
+        <svg viewBox="0 0 20 20" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" /><path d="M13 13l4.5 4.5" /></svg>
+        Search this area
+      </button>
+
       <!-- Short status messages shown over the map (location, layer change) -->
-      <div id="map-message" class="hidden absolute top-3 left-1/2 -translate-x-1/2 z-[450] max-w-xs px-3 py-2 rounded bg-gray-900/85 text-white text-sm text-center shadow" role="status" aria-live="polite"></div>
+      <div id="map-message" class="hidden absolute bottom-8 left-1/2 -translate-x-1/2 z-[450] max-w-xs px-3 py-2 rounded bg-gray-900/85 text-white text-sm text-center shadow" role="status" aria-live="polite"></div>
 
       <!-- Right-side map control stack (buttons only for now) -->
       <div class="absolute top-3 right-3 z-[400] flex flex-col gap-2" role="toolbar" aria-label="Map controls">

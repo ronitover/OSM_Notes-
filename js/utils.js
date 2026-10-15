@@ -100,6 +100,26 @@ export function clampBbox(bbox, maxSize = 0.5) {
   };
 }
 
+/** Make a bbox twice as wide and tall (same centre), but never bigger than the limit. */
+export function widenBbox(bbox) {
+  const width = bbox.maxLon - bbox.minLon;
+  const height = bbox.maxLat - bbox.minLat;
+  const bigger = {
+    minLon: bbox.minLon - width / 2,
+    minLat: bbox.minLat - height / 2,
+    maxLon: bbox.maxLon + width / 2,
+    maxLat: bbox.maxLat + height / 2
+  };
+  return clampBbox(bigger);
+}
+
+/** True when a bbox is already as big as we are allowed to search (0.5° x 0.5°). */
+export function isMaxBbox(bbox, maxSize = 0.5) {
+  const tolerance = 0.0001; // allow for tiny rounding errors
+  return bbox.maxLon - bbox.minLon >= maxSize - tolerance &&
+         bbox.maxLat - bbox.minLat >= maxSize - tolerance;
+}
+
 /** A square bbox of "size" degrees around a point (used for "my location"). */
 export function bboxAroundPoint(lat, lon, size = 0.1) {
   const half = size / 2;

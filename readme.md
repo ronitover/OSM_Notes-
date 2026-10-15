@@ -71,6 +71,16 @@ CONTEXT.md          project brief / scope
 - **Map markers**: one per result, red for open and green for closed. The map moves to the searched area.
   - Clicking a card highlights the card, highlights its marker and flies the map to it.
   - Clicking a marker highlights its marker and scrolls to its card.
+- **Loading state**: while searching, the whole form is disabled, the submit button shows a spinner and "Searching…", and three pulsing skeleton cards appear.
+- **Empty state**: for example "No open notes older than 1 year here", with a **Widen search** button that doubles the search box (up to the 0.5° limit). At the limit, the button is replaced by a hint to change the filters.
+- **Error states** with a **Retry** button that repeats the exact failed action:
+  - Area not found
+  - Location blocked / unavailable
+  - No connection (network error)
+  - Area too large (HTTP 400)
+  - Server problem (other HTTP errors)
+- **Live re-filtering**: changing Status or "Older than" after a search re-filters the stored notes with **no new request**. The one exception is switching from Open to Closed/All when only open notes were fetched: then it refetches with `closed=-1`.
+- **Search this area**: after you pan or zoom to a different area (`moveend`), a button appears at the top of the map that searches the visible area. It does not appear after the app's own map moves (fitting results, flying to a card).
 - **Note detail view** (the **View** button on a card): Back button, note id, age badge, type, status, created date and reporter, the full report, the comment thread, an **Open on OpenStreetMap** link, and **Copy link** (shows "Copied!").
 
 ## JavaScript events used (so far)
@@ -78,7 +88,9 @@ CONTEXT.md          project brief / scope
 | --- | --- |
 | `submit` | Notes form: validate and search |
 | `input` | Area and Max results: clear the inline error while typing |
-| `click` | Map controls, Notes link, Use my location, Clear location, note cards (event delegation), View, map markers, Back, Copy link |
+| `change` | Status chips and Older than: re-filter results without refetching |
+| `moveend` (Leaflet) | Map: show the "Search this area" button |
+| `click` | Map controls, Notes link, Use my location, Clear location, note cards (event delegation), View, map markers, Back, Copy link, Retry, Widen search, Search this area |
 
 ## APIs used
 | Purpose | Endpoint |
@@ -97,3 +109,4 @@ All APIs are free and need no key. Nominatim is called only when the form is sub
 - [x] Step 3: Notes filter form with validation and feedback
 - [x] Step 4: Fetch and normalize notes from the OSM Notes API
 - [x] Step 5: Sorted note list, map markers and detail view
+- [x] Step 6: Loading, empty and error states with live re-filtering
